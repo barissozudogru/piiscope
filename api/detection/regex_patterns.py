@@ -254,6 +254,95 @@ PATTERNS: Dict[str, PatternDefinition] = {
         0.9,
         pii_category="health",
     ),
+
+    # ------------------------------------------------------------------
+    # SWIFT / BIC codes
+    # Format: 4-letter bank code + 2-letter country + 2 location + optional 3 branch
+    # Validated case-sensitively to avoid collisions with common words.
+    # ------------------------------------------------------------------
+    "swift_bic": PatternDefinition(
+        r"\b[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}(?:[A-Z0-9]{3})?\b",
+        "SWIFT / BIC code",
+        0.7,
+        pii_category="financial",
+        case_sensitive=True,
+    ),
+
+    # ------------------------------------------------------------------
+    # Passport numbers – country-specific patterns
+    #
+    # Turkish passport: letter T followed by 8 digits (T + 8 digits = 9 chars)
+    # German passport: letters + digits, same charset as national_id but
+    #                  explicitly annotated as passport context
+    # UK passport: two letters + six digits (standard MRP format)
+    # ------------------------------------------------------------------
+    "passport_tr": PatternDefinition(
+        r"\bT[0-9]{8}\b",
+        "Turkish passport number",
+        0.9,
+        pii_category="national_id",
+        case_sensitive=True,
+    ),
+    "passport_de": PatternDefinition(
+        r"\b[CFGHJKLMNPRTVWXYZ][CFGHJKLMNPRTVWXYZ0-9]{8}\b",
+        "German passport number",
+        0.85,
+        pii_category="national_id",
+        case_sensitive=True,
+    ),
+    "passport_uk": PatternDefinition(
+        r"\b[A-Z]{2}[0-9]{6}\b",
+        "UK passport number",
+        0.85,
+        pii_category="national_id",
+        case_sensitive=True,
+    ),
+
+    # ------------------------------------------------------------------
+    # Turkish IBAN  (TR + 24 digits = 26 chars total)
+    # Separate entry so context-aware boosting and the IBAN checksum
+    # validator can be applied with a TR-specific label.
+    # ------------------------------------------------------------------
+    "iban_tr": PatternDefinition(
+        r"\bTR[0-9]{24}\b",
+        "Turkish IBAN",
+        0.8,
+        requires_checksum=True,
+        pii_category="financial",
+        case_sensitive=True,
+    ),
+
+    # ------------------------------------------------------------------
+    # Turkish phone – stricter alternative to tr_phone for context-aware use
+    # Matches mobile (05xx) and landline (0xxx) formats with international
+    # prefix (+90) optional.
+    # ------------------------------------------------------------------
+    "tr_phone_strict": PatternDefinition(
+        r"\b(?:\+90[ \-]?)?0[1-9][0-9]{2}[ \-]?[0-9]{3}[ \-]?[0-9]{2}[ \-]?[0-9]{2}\b",
+        "Turkish telephone number (strict)",
+        0.45,
+        pii_category="contact",
+    ),
+
+    # ------------------------------------------------------------------
+    # EU VAT numbers – per-country stricter formats
+    # Germany: DE + 9 digits
+    # France:  FR + 2 alphanumeric + 9 digits
+    # Turkey:  TR VAT: 10 digits (vergi no), no EU country prefix
+    # ------------------------------------------------------------------
+    "vat_de": PatternDefinition(
+        r"\bDE[0-9]{9}\b",
+        "German VAT number",
+        0.6,
+        pii_category="financial",
+        case_sensitive=True,
+    ),
+    "vat_tr": PatternDefinition(
+        r"\b[0-9]{10}\b",
+        "Turkish Tax / Vergi Kimlik Numarasi (VKN)",
+        0.5,
+        pii_category="financial",
+    ),
 }
 
 

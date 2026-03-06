@@ -21,7 +21,7 @@ from fastapi.responses import JSONResponse
 
 from . import models
 from . import database
-from .routes import auth_routes, profile_routes, scan_routes, audit_routes, data_source_routes
+from .routes import auth_routes, profile_routes, scan_routes, audit_routes, data_source_routes, webhook_routes
 # from .middleware import setup_middleware
 # from .logging_config import setup_logging
 # from .performance import init_redis_cache, init_connection_pool
@@ -93,3 +93,4 @@ app.include_router(profile_routes.router, prefix="/profiles", tags=["profiles"])
 app.include_router(scan_routes.router, prefix="/scan", tags=["scan"])
 app.include_router(audit_routes.router, prefix="/audit", tags=["audit"])
 app.include_router(data_source_routes.router, prefix="/data-sources", tags=["data-sources"])
+app.include_router(webhook_routes.router, prefix="/webhooks", tags=["webhooks"])

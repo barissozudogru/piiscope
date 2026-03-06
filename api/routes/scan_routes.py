@@ -22,6 +22,10 @@ from ..database import get_db
 from ..config import settings
 from ..tasks import scan_file_task
 from ..detection import masking
+from ..detection.risk_scorer import RiskScorer
+from ..detection.classifier import DataClassifier
+from ..services.compliance_report import ComplianceReportGenerator
+from ..services.remediation import RemediationService
 from ..audit import log_audit_event
 
 router = APIRouter()
@@ -269,6 +273,107 @@ async def get_privacy_impact_assessment(
     if not metric or not metric.privacy_impact_assessment:
         raise HTTPException(status_code=404, detail="Privacy impact assessment not available")
     return metric.privacy_impact_assessment
+
+
+@router.get("/jobs/{job_id}/compliance-report")
+async def get_compliance_report(
+    job_id: int,
+    format: str = "json",
+    organisation: str = "Organisation",
+    data_controller: str = "Data Controller",
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+) -> dict:
+    """Generate a GDPR Article 30 / DPIA compliance report for a completed scan.
+
+    Supported ``format`` values: ``json``, ``html``, ``markdown``.
+    Returns JSON when ``format=json``; for ``html`` and ``markdown`` the
+    rendered string is wrapped in a JSON envelope under the key ``content``.
+    """
+    job = db.query(models.ScanJob).get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    if current_user.role == models.RoleEnum.USER and job.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorised to view this job")
+    if job.status != models.ScanStatus.COMPLETED:
+        raise HTTPException(status_code=400, detail="Job not completed yet")
+
+    # Fetch all non-false-positive findings
+    findings_orm = (
+        db.query(models.Finding)
+        .filter(models.Finding.job_id == job_id, models.Finding.is_false_positive == False)  # noqa: E712
+        .all()
+    )
+    findings = [
+        {
+            "id": f.id,
+            "rule_id": f.rule_id,
+            "column_name": f.column_name,
+            "severity": f.severity,
+            "confidence": f.confidence,
+            "pii_category": (f.finding_metadata or {}).get("pii_category", ""),
+        }
+        for f in findings_orm
+    ]
+
+    # Classify findings
+    classifier = DataClassifier()
+    classified = classifier.classify_scan(findings)
+    inventory = classifier.inventory_to_dict(classifier.build_inventory(classified))
+
+    # Score scan
+    scorer = RiskScorer(context="database_field", jurisdictions=["gdpr"])
+    risk_summary = scorer.score_scan(job_id, findings)
+    risk_dict = {
+        "aggregate_score": risk_summary.aggregate_score,
+        "max_score": risk_summary.max_score,
+        "critical_count": risk_summary.critical_count,
+        "high_count": risk_summary.high_count,
+        "medium_count": risk_summary.medium_count,
+        "low_count": risk_summary.low_count,
+        "top_rule_ids": risk_summary.top_rule_ids,
+    }
+
+    # Compute per-finding risk scores for remediation prioritisation
+    finding_scores = {
+        fs.rule_id: fs.final_score
+        for fs in risk_summary.scored_findings
+    }
+    risk_scores_by_id = {
+        f["id"]: finding_scores.get(f["rule_id"], 5.0)
+        for f in findings
+    }
+
+    # Generate remediation suggestions
+    remediation_svc = RemediationService()
+    suggestions = remediation_svc.suggest_for_scan(findings, risk_scores_by_id)
+    suggestion_dicts = [remediation_svc.to_dict(s) for s in suggestions]
+
+    # Generate compliance report
+    generator = ComplianceReportGenerator()
+    report_str = generator.generate(
+        scan_id=job_id,
+        findings=findings,
+        classified_inventory=inventory,
+        risk_summary=risk_dict,
+        suggestions=suggestion_dicts,
+        format=format,
+        organisation=organisation,
+        data_controller=data_controller,
+    )
+
+    log_audit_event(
+        db,
+        current_user.id,
+        action="compliance_report_generated",
+        target=f"job:{job_id}",
+        details={"format": format},
+    )
+
+    if format.lower() == "json":
+        import json as _json
+        return _json.loads(report_str)
+    return {"format": format, "content": report_str}
 
 
 @router.get("/download/{file_name}")

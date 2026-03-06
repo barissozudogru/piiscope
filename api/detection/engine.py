@@ -67,6 +67,7 @@ _MIN_CONFIDENCE = 0.2
 _CHECKSUM_VALIDATORS: Dict[str, Callable[[str], bool]] = {
     "credit_card": luhn_check,
     "iban": iban_check,
+    "iban_tr": iban_check,   # Turkish IBAN uses the same MOD-97 check
     "tc_kimlik": tc_kimlik_check,
 }
 

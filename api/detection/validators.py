@@ -237,4 +237,29 @@ def column_name_context_boost(column_name: str, rule_id: str) -> float:
                 return 1.3
         return 1.0
 
+    if rule_id in ("swift_bic",):
+        if "swift" in col_clean or "bic" in col_clean or "bank" in col_clean:
+            return 1.5
+        return 1.0
+
+    if rule_id in ("passport_tr", "passport_de", "passport_uk", "passport"):
+        if "passport" in col_clean or "travel" in col_clean or "document" in col_clean:
+            return 1.5
+        return 1.0
+
+    if rule_id in ("iban_tr",):
+        if "iban" in col_clean or "bank" in col_clean or "account" in col_clean:
+            return 1.5
+        return 1.0
+
+    if rule_id in ("vat_de", "vat_tr", "vat"):
+        if "vat" in col_clean or "tax" in col_clean or "vergi" in col_clean:
+            return 1.5
+        return 1.0
+
+    if rule_id in ("tr_phone_strict", "tr_phone"):
+        if "phone" in col_clean or "tel" in col_clean or "gsm" in col_clean or "cep" in col_clean:
+            return 1.5
+        return 1.0
+
     return 1.0

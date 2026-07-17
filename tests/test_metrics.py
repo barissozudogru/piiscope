@@ -1,6 +1,12 @@
+import os
+import sys
+
 import pandas as pd
 
-from gdpr_privacy_app.api.detection.metrics import compute_k_anonymity, compute_l_diversity, compute_t_closeness
+# Allow importing without a full app installation
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
+from api.detection.metrics import compute_k_anonymity, compute_l_diversity, compute_t_closeness
 
 
 def test_k_anonymity():

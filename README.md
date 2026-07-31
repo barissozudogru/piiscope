@@ -49,7 +49,7 @@ compliance with the **General Data Protection Regulation (GDPR)**.
   transport is available.  Network egress is disabled unless
   explicitly toggled by a Super Admin.  Secrets are loaded from
   environment variables.
-* **Fancy React dashboard** – A modern React frontend presents
+* **React dashboard** – A React frontend presents
   summary KPIs, bar/line charts, a k‑anonymity widget, risk
   heatmaps and an FP (false positive) review queue.  The interface
   is responsive, accessible and supports keyboard navigation and
@@ -69,8 +69,8 @@ compliance with the **General Data Protection Regulation (GDPR)**.
 1. Clone the repository and change into the project root:
 
    ```bash
-   git clone https://example.com/gdpr_privacy_app.git
-   cd gdpr_privacy_app
+   git clone https://github.com/barissozudogru/data-security-checker.git
+   cd data-security-checker
    ```
 
 2. Copy the example environment file and adjust secrets:
@@ -131,7 +131,7 @@ starts a scan, waits for completion, and exports a sanitised CSV.  To
 run the script:
 
 ```bash
-python gdpr_privacy_app/tests/sample_scan_script.py
+python tests/sample_scan_script.py
 ```
 
 The script prints the job progress and returns a download URL for the
@@ -140,7 +140,7 @@ sanitised file.
 ## Repository layout
 
 ```
-gdpr_privacy_app/
+data-security-checker/
 ├── api/        – FastAPI application and detection engine
 ├── app/        – React frontend (dashboard, charts, file upload, etc.)
 ├── docs/       – Architecture description, GDPR mapping, DPIA template, threat model

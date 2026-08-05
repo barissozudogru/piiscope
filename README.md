@@ -5,55 +5,13 @@ detecting, flagging and remediating privacy risks in structured data
 files.  The system was built for a European context and prioritises
 compliance with the **General Data Protection Regulation (GDPR)**.
 
-## Features
+## Capabilities
 
-* **Multiple ingestion modes** – Upload CSV/JSON/Parquet files, paste
-  free text or connect to a local database (e.g. PostgreSQL or
-  SQLite) in read‑only mode.  Large files are processed in
-  chunks so the application can handle datasets larger than 2 GB
-  without exhausting RAM.
-* **Configurable sensitivity profiles** – Built‑in profiles for
-  **Medical/PHI** and **General PII** define regex patterns,
-  dictionaries and severity weights.  Users can create custom
-  profiles in YAML/JSON, hot‑reload them without restarting the
-  service and version control their changes.
-* **Hybrid detection engine** – Sensitive data is detected using
-  locale‑aware regular expressions, gazetteers, dictionaries and an
-  optional natural‑language model (spaCy).  Each finding records
-  record ID, field name, detection rule, severity, confidence and a
-  sample of the evidence.
-* **Risk scoring and metrics** – The engine computes risk scores for
-  columns and records based on sensitivity weight, confidence and
-  prevalence.  It also calculates **k‑anonymity**, **l‑diversity** and
-  **t‑closeness** on configurable quasi‑identifier sets to help
-  evaluate anonymisation quality, as described in academic
-  literature.
-* **Remediation actions** – Users can apply hashing, nulling,
-  partial redaction, generalisation, date shifting and tokenisation
-  on a per‑column or per‑cell basis.  A one‑click export produces a
-  sanitised file along with an audit trail of applied transforms.
-* **Reports and DPIA support** – The system generates HTML/PDF
-  reports summarising the dataset, detected fields, risk metrics,
-  examples and remediation actions, with references to relevant
-  GDPR articles and a data‑protection‑impact‑assessment (DPIA)
-  template.
-* **Role‑based access control (RBAC)** – Three built‑in roles
-  control access to API endpoints and UI routes: **User**
-  (restricted view of results), **Admin** (manage profiles and
-  reports) and **Super Admin** (system and security settings).
-* **Audit logging** – Every sensitive operation (login, scanning,
-  export, configuration change) writes an immutable record to the
-  audit log.  Logs include timestamp, user ID, action and details.
-* **Secure by default** – The default configuration stores only
-  metadata and findings, not raw data.  Encryption at rest and
-  transport is available.  Network egress is disabled unless
-  explicitly toggled by a Super Admin.  Secrets are loaded from
-  environment variables.
-* **React dashboard** – A React frontend presents
-  summary KPIs, bar/line charts, a k‑anonymity widget, risk
-  heatmaps and an FP (false positive) review queue.  The interface
-  is responsive, accessible and supports keyboard navigation and
-  high‑contrast modes.
+The platform ingests CSV, JSON, Parquet files, free text, or SQL databases (PostgreSQL, SQLite) in read-only mode, processing large files in chunks. Sensitive data is detected using regular expressions, gazetteers, dictionaries, and optional spaCy models.
+
+Risk metrics include k-anonymity, l-diversity, and t-closeness calculated on quasi-identifier sets. Remediation options include hashing, nulling, redaction, generalisation, date shifting, and tokenisation, with HTML and PDF report generation for DPIA documentation.
+
+Built-in role-based access control (User, Admin, Super Admin) manages system access, while immutable audit logs record sensitive actions. A React frontend provides summary charts, risk heatmaps, and a false-positive review queue.
 
 ## Getting started
 

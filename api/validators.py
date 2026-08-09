@@ -18,10 +18,11 @@ from .exceptions import ValidationError
 
 def validate_email(email: str) -> str:
     """Validate email format."""
+    email = email.strip()
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     if not re.match(pattern, email):
         raise ValidationError("Invalid email format")
-    return email.lower().strip()
+    return email.lower()
 
 
 def validate_username(username: str) -> str:

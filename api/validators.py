@@ -50,7 +50,7 @@ def validate_password(password: str) -> str:
         (r'[a-z]', "Password must contain at least one lowercase letter"),
         (r'[A-Z]', "Password must contain at least one uppercase letter"),
         (r'\d', "Password must contain at least one digit"),
-        (r'[!@#$%^&*(),.?":{}|<>]', "Password must contain at least one special character")
+        (r'[^a-zA-Z0-9\s]', "Password must contain at least one special character")
     ]
     
     for pattern, message in checks:

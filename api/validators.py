@@ -10,7 +10,6 @@ import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
-import yaml
 from pydantic import BaseModel, ValidationError as PydanticValidationError
 
 from .exceptions import ValidationError
@@ -90,20 +89,6 @@ def validate_json_data(data: Union[str, Dict]) -> Dict[str, Any]:
     
     if not isinstance(data, dict):
         raise ValidationError("JSON data must be an object")
-    
-    return data
-
-
-def validate_yaml_data(data: Union[str, Dict]) -> Dict[str, Any]:
-    """Validate and parse YAML data."""
-    if isinstance(data, str):
-        try:
-            data = yaml.safe_load(data)
-        except yaml.YAMLError as e:
-            raise ValidationError(f"Invalid YAML format: {str(e)}")
-    
-    if not isinstance(data, dict):
-        raise ValidationError("YAML data must be an object")
     
     return data
 

@@ -14,7 +14,7 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-piiscope} -d $${POSTGRES_DB:-piiscope}"]
       interval: 10s
@@ -26,7 +26,7 @@ services:
     container_name: piiscope-redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -39,6 +39,10 @@ services:
       dockerfile: deploy/Dockerfile.api
     container_name: piiscope-api
     env_file: ../.env
+    volumes:
+      - uploads_data:/code/api/uploads
+      - exports_data:/code/api/exports
+      - reports_data:/code/api/reports
     restart: unless-stopped
     depends_on:
       db:
@@ -46,7 +50,7 @@ services:
       redis:
         condition: service_healthy
     ports:
-      - "8000:8000"
+      - "${API_PORT:-8000}:8000"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health').status==200 else 1)"]
       interval: 30s
@@ -59,6 +63,10 @@ services:
       dockerfile: deploy/Dockerfile.worker
     container_name: piiscope-worker
     env_file: ../.env
+    volumes:
+      - uploads_data:/code/api/uploads
+      - exports_data:/code/api/exports
+      - reports_data:/code/api/reports
     restart: unless-stopped
     depends_on:
       db:
@@ -70,15 +78,20 @@ services:
     build:
       context: ..
       dockerfile: deploy/Dockerfile.ui
+      args:
+        REACT_APP_API_URL: ${PIISCOPE_API_URL:-http://localhost:8000}
     container_name: piiscope-ui
     environment:
       - REACT_APP_API_URL=http://localhost:8000
     restart: unless-stopped
     ports:
-      - "3000:80"
+      - "${UI_PORT:-3000}:80"
     depends_on:
       api:
         condition: service_healthy
 
 volumes:
   db_data:
+  uploads_data:
+  exports_data:
+  reports_data:

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Box, Typography, LinearProgress, Button, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
+import 'chart.js/auto';
 import { Bar } from 'react-chartjs-2';
 import { useAuth } from '../App';
 import * as api from '../api';
@@ -117,7 +118,9 @@ export default function JobStatusPage() {
               <Typography>No sensitive data detected.</Typography>
             ) : (
               <>
-                <Bar data={chartData} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }} height={200} />
+                <Box sx={{ height: 240 }}>
+                  <Bar data={chartData} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }} />
+                </Box>
                 <TableContainer component={Paper} sx={{ maxHeight: 300, mt: 2 }}>
                   <Table size="small" stickyHeader>
                     <TableHead>

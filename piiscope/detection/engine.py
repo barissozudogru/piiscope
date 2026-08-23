@@ -77,6 +77,12 @@ _GIVEN_NAME_COLUMN_TOKENS = frozenset(
         "vorname", "prenom", "voornaam", "imie", "ad", "adi", "nombre", "primeiro",
     }
 )
+_SENTENCE_BREAKS = frozenset('.!?:;("\'[')
+_TITLE_RE = re.compile(
+    r"\b(?:dr|mr|mrs|ms|miss|prof|herr|frau|bay|bayan|sayın|sayin|sr|sra|mme|mlle|sig|sig\.ra)"
+    r"\.?\s+$",
+    re.IGNORECASE,
+)
 _NON_PERSON_COLUMN_TOKENS = frozenset(
     {
         "city", "town", "street", "address", "addr", "country", "state", "province",
@@ -389,7 +395,9 @@ class DetectionEngine:
         # ------------------------------------------------------------------
 
         # Extract tokens with their original case for capitalization checks
-        orig_tokens = [m.group() for m in re.finditer(r"\b\w+\b", text) if len(m.group()) >= 3]
+        token_matches = [m for m in re.finditer(r"\b\w+\b", text) if len(m.group()) >= 3]
+        orig_tokens = [m.group() for m in token_matches]
+        token_starts = [m.start() for m in token_matches]
 
         # We also need lower tokens for simple matching of drugs/hospitals
         tokens = [t.lower() for t in orig_tokens]
@@ -423,10 +431,15 @@ class DetectionEngine:
                 # A token that is both a given name and a surname, directly after a
                 # given name in free text ("Ayse Yilmaz"), is read as the surname.
                 follows_given_name = (
-                    i > 0
-                    and not is_name_col
-                    and tokens[i - 1] in self.given_names
+                    i > 0 and tokens[i - 1] in self.given_names and lower_token in self.surnames
+                )
+                # The first token of a name cell that is both a given name and a
+                # surname ("John") is the given name unless the column says surname.
+                leading_given_name = (
+                    i == 0
+                    and lower_token in self.given_names
                     and lower_token in self.surnames
+                    and not surname_only_col
                 )
 
                 # Given name logic (skipped in columns that are explicitly surnames)
@@ -435,9 +448,21 @@ class DetectionEngine:
                     and not surname_only_col
                     and not follows_given_name
                 ):
-                    # In name columns, match case-insensitively.
-                    # In other columns, token must be capitalised and not in stoplist.
-                    if is_name_col or (is_capitalised and lower_token not in self.stoplist_names):
+                    # In name columns, match case-insensitively. In other columns the
+                    # token must be capitalised, outside the stoplist, and, when it opens
+                    # a sentence, either follow a title or precede a capitalised surname.
+                    free_text_ok = is_capitalised and lower_token not in self.stoplist_names
+                    if free_text_ok and not is_name_col:
+                        before = text[: token_starts[i]].rstrip()
+                        if not before or before[-1] in _SENTENCE_BREAKS:
+                            titled = bool(_TITLE_RE.search(text[: token_starts[i]]))
+                            next_is_surname = (
+                                i + 1 < len(tokens)
+                                and (orig_tokens[i + 1].istitle() or orig_tokens[i + 1].isupper())
+                                and tokens[i + 1] in self.surnames
+                            )
+                            free_text_ok = titled or next_is_surname
+                    if is_name_col or free_text_ok:
                         ctx = given_name_ctx if is_name_col else max(1.0, given_name_ctx)
                         confidence = round(min(1.0, 0.6 * ctx), 3)
                         if confidence >= _MIN_CONFIDENCE:
@@ -453,7 +478,7 @@ class DetectionEngine:
                                 findings.append(f)
 
                 # Surname logic (skipped in columns that are explicitly given names)
-                if lower_token in self.surnames and not given_only_col:
+                if lower_token in self.surnames and not given_only_col and not leading_given_name:
                     fire_surname = False
                     if is_name_col:
                         fire_surname = True

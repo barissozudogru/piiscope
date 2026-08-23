@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, Typography, Button, TableContainer, Table, TableHead, TableRow, TableCell, TableBody, Paper, Chip } from '@mui/material';
+import 'chart.js/auto';
 import { Bar } from 'react-chartjs-2';
 import { useAuth } from '../App';
 import * as api from '../api';
@@ -46,7 +47,9 @@ export default function DashboardPage() {
       <Typography variant="h5" gutterBottom>Dashboard</Typography>
       <Button variant="contained" onClick={() => navigate('/upload')}>New Scan</Button>
       <Box mt={4}>
-        <Bar data={chartData} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }} height={200} />
+        <Box sx={{ height: 240 }}>
+          <Bar data={chartData} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }} />
+        </Box>
       </Box>
       <Box mt={4}>
         <Typography variant="h6">Recent Jobs</Typography>

@@ -1,4 +1,5 @@
 const path = require('path');
+const webpack = require('webpack');
 
 module.exports = {
   entry: './src/index.js',
@@ -31,6 +32,14 @@ module.exports = {
   resolve: {
     extensions: ['.js', '.jsx'],
   },
+  plugins: [
+    // Bake the API base URL into the bundle; browsers have no process.env.
+    new webpack.DefinePlugin({
+      'process.env.REACT_APP_API_URL': JSON.stringify(
+        process.env.REACT_APP_API_URL || 'http://localhost:8000'
+      ),
+    }),
+  ],
   devServer: {
     static: {
       directory: path.join(__dirname, 'public'),

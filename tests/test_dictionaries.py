@@ -79,3 +79,32 @@ def test_user_supplied_dictionary(tmp_path):
     findings = engine.detect_cell("UniqueNewName", "first_name")
     names = [f.evidence for f in findings if f.rule_id == "given_name"]
     assert "uniquenewname" in names
+
+
+def test_both_list_tokens_resolve_by_position():
+    """"John Doe": john is in both lists and resolves as the given name, doe as the surname."""
+    engine = DetectionEngine({})
+    findings = {f.rule_id: f.evidence for f in engine.detect_cell("John Doe", "name")}
+    assert findings.get("given_name") == "john"
+    assert findings.get("surname") == "doe"
+    single = {f.rule_id for f in engine.detect_cell("John", "name")}
+    assert "given_name" in single and "surname" not in single
+
+
+def test_sentence_initial_names_need_context():
+    """A capitalised token that opens a sentence is a name only with a title or a surname."""
+    engine = DetectionEngine({})
+    negatives = (
+        "Gift card purchase. No personal notes.",
+        "June referral scheduled.",
+        "Grace period ends",
+    )
+    positives = (
+        "Dr. Ayşe Yılmaz visited on Monday",
+        "Hans Müller called twice",
+        "Referred by Frau Petra",
+    )
+    for text in negatives:
+        assert not [f for f in engine.detect_cell(text, "notes") if f.rule_id == "given_name"], text
+    for text in positives:
+        assert [f for f in engine.detect_cell(text, "notes") if f.rule_id == "given_name"], text

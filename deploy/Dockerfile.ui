@@ -1,16 +1,21 @@
-FROM node:18
+# Stage 1: Build
+FROM node:20-alpine AS build
 
-WORKDIR /code
+WORKDIR /app
 
-COPY gdpr_privacy_app/app/package.json ./
-COPY gdpr_privacy_app/app/webpack.config.js ./
-COPY gdpr_privacy_app/app/public ./public
-COPY gdpr_privacy_app/app/src ./src
+COPY app/package.json app/package-lock.json* ./
+RUN npm ci --no-audit --no-fund
 
-RUN npm install
+COPY app/webpack.config.js ./
+COPY app/public ./public
+COPY app/src ./src
+
 RUN npm run build
-RUN npm install -g serve
 
-EXPOSE 3000
+# Stage 2: Serve
+FROM nginx:1.27-alpine
 
-CMD ["serve", "-s", "dist", "-l", "3000"]
+COPY --from=build /app/dist /usr/share/nginx/html
+COPY deploy/nginx.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 80

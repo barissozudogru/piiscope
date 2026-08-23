@@ -1,6 +1,7 @@
 {
-  "name": "gdpr-privacy-ui",
+  "name": "piiscope-ui",
   "version": "1.0.0",
+  "description": "Find, score and remediate personal data in your files and databases.",
   "private": true,
   "scripts": {
     "start": "webpack serve --mode development --open",
@@ -23,7 +24,7 @@
     "webpack-dev-server": "4.15.1",
     "babel-loader": "9.1.3",
     "@babel/core": "7.22.19",
-    "@babel/preset-env": "7.22.19",
+    "@babel/preset-env": "^7.22.20",
     "@babel/preset-react": "7.22.5"
   }
 }

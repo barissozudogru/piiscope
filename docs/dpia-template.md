@@ -44,40 +44,40 @@ information specific to your organisation and dataset.
 
 ## 3. Assessment of risks to rights and freedoms
 
-1. **Unauthorised access to findings** – Risk that sensitive
-   information (e.g. health data) could be accessed by unauthorised
+1. **Unauthorized access to findings** - Risk that sensitive
+   information (e.g. health data) could be accessed by unauthorized
    personnel.  *Likelihood:* medium; *Impact:* high.
-2. **Re‑identification through audit logs** – Even with metadata
+2. **Re-identification through audit logs** - Even with metadata
    storage, combining findings with other information might identify
    individuals.  *Likelihood:* low; *Impact:* medium.
-3. **False positives/false negatives** – Misclassification of data
-   could lead to over‑masking (reducing utility) or under‑masking
+3. **False positives/false negatives** - Misclassification of data
+   could lead to over-masking (reducing utility) or under-masking
    (exposing personal data).  *Likelihood:* medium; *Impact:* medium.
-4. **Excessive storage** – Enabling raw data storage without timely
+4. **Excessive storage** - Enabling raw data storage without timely
    deletion could contravene storage limitation.
-5. **Model bias** – NLP models may perform poorly on minority names
+5. **Model bias** - NLP models may perform poorly on minority names
    or dialects, potentially resulting in discriminatory outcomes.
 
 ## 4. Measures to address risks
 
-1. **RBAC and least‑privilege** – Only authorised users can start
+1. **RBAC and least-privilege** - Only authorised users can start
    scans or view results.  Roles restrict access to sensitive
    endpoints.  Access logs support accountability.
-2. **Encryption** – TLS protects data in transit; disk encryption and
+2. **Encryption** - TLS protects data in transit; disk encryption and
    encryption at the application layer protect data at rest.  Keys
    are stored in environment variables separate from the codebase.
-3. **Configurable retention** – Administrators can configure how long
+3. **Configurable retention** - Administrators can configure how long
    findings and raw files are retained; the default is to store only
    findings and delete raw data immediately.  A cron job or Celery
    beat task enforces retention policies.
-4. **Human review** – A false‑positive review queue allows users to
-   mark and correct mis‑detected entities.  Model confidence scores
+4. **Human review** - A false-positive review queue allows users to
+   mark and correct mis-detected entities.  Model confidence scores
    are surfaced to guide reviewers.
-5. **Model selection and validation** – Use only locally downloaded
+5. **Model selection and validation** - Use only locally downloaded
    models with documented performance; evaluate them on a sample
    representative of your data.  Consider disabling NLP detection if
    no trustworthy model is available.
-6. **Documentation and training** – Provide users with guidance on
+6. **Documentation and training** - Provide users with guidance on
    interpretation of risk scores and remediations.  Train staff on
    privacy principles and the importance of data minimisation.
 

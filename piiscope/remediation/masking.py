@@ -1,9 +1,10 @@
 """Data masking and pseudonymisation functions."""
+
 from __future__ import annotations
 
 import hashlib
-from datetime import datetime, timedelta
-from typing import Any, Optional
+from datetime import timedelta
+from typing import Any
 
 from dateutil import parser
 
@@ -34,7 +35,7 @@ def partial_redact(value: str, left: int = 1, right: int = 1, mask_char: str = "
     return s[:left] + (mask_char * (len(s) - left - right)) + s[-right:]
 
 
-def generalize_numeric(value: Any, bucket_size: int) -> Optional[str]:
+def generalize_numeric(value: Any, bucket_size: int) -> str | None:
     """Generalise a numeric value into a bucket of given size.
 
     Example: generalize_numeric(27, 10) -> "20-29".
@@ -48,14 +49,14 @@ def generalize_numeric(value: Any, bucket_size: int) -> Optional[str]:
     return f"{lower}-{upper}"
 
 
-def date_shift(value: Any, days: int) -> Optional[str]:
+def date_shift(value: Any, days: int) -> str | None:
     """Shift a date by the given number of days.
 
     Returns ISO formatted date string or None if parsing fails.
     """
     try:
         dt = parser.parse(str(value))
-    except (parser.ParserError, TypeError, ValueError):
+    except (parser.ParserError, TypeError, ValueError, OverflowError):
         return None
     shifted = dt + timedelta(days=days)
     return shifted.date().isoformat()

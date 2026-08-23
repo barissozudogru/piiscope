@@ -3,41 +3,41 @@
 This module implements security, rate limiting, and monitoring middleware
 to protect the application and provide observability.
 """
+
 from __future__ import annotations
 
 import time
 import uuid
-from typing import Callable
+from collections.abc import Callable
 
-from fastapi import FastAPI, Request, Response, HTTPException, status
-from fastapi.middleware.base import BaseHTTPMiddleware
+from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from starlette.middleware.sessions import SessionMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from .config import settings
-from .logging_config import log_security_event, log_performance_metric
+from .logging_config import log_performance_metric, log_security_event
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Add security headers to all responses."""
-    
+
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         response = await call_next(request)
-        
+
         if settings.enable_security_headers:
             # Prevent clickjacking
             response.headers["X-Frame-Options"] = "DENY"
-            
+
             # Prevent MIME sniffing
             response.headers["X-Content-Type-Options"] = "nosniff"
-            
+
             # XSS protection
             response.headers["X-XSS-Protection"] = "1; mode=block"
-            
+
             # Referrer policy
             response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-            
+
             # Content Security Policy
             response.headers["Content-Security-Policy"] = (
                 "default-src 'self'; "
@@ -50,11 +50,13 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
                 "media-src 'self'; "
                 "frame-src 'none'; "
             )
-            
+
             # Strict Transport Security (HTTPS only)
             if request.url.scheme == "https":
-                response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-        
+                response.headers["Strict-Transport-Security"] = (
+                    "max-age=31536000; includeSubDomains"  # noqa: E501
+                )
+
         return response
 
 
@@ -92,7 +94,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     def _purge_stale(self, now: float) -> None:
         """Remove all IPs whose sliding window is completely empty."""
         stale = [
-            ip for ip, entries in self.requests.items()
+            ip
+            for ip, entries in self.requests.items()
             if not any(now - ts < self.window_size for ts, _ in entries)
         ]
         for ip in stale:
@@ -128,14 +131,13 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         # Clean old entries for this IP.
         if client_ip in self.requests:
             self.requests[client_ip] = [
-                (timestamp, count) for timestamp, count in self.requests[client_ip]
+                (timestamp, count)
+                for timestamp, count in self.requests[client_ip]
                 if now - timestamp < self.window_size
             ]
 
         # Count requests in current window.
-        current_requests = sum(
-            count for timestamp, count in self.requests.get(client_ip, [])
-        )
+        current_requests = sum(count for timestamp, count in self.requests.get(client_ip, []))
 
         if current_requests >= self.max_requests:
             return True
@@ -153,13 +155,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         if self.is_rate_limited(client_ip):
             log_security_event(
-                "Rate limit exceeded",
-                ip_address=client_ip,
-                endpoint=str(request.url)
+                "Rate limit exceeded", ip_address=client_ip, endpoint=str(request.url)
             )
             raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail="Too many requests"
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Too many requests"
             )
 
         return await call_next(request)
@@ -167,15 +166,15 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
     """Log request and response details for monitoring."""
-    
+
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         # Generate request ID
         request_id = str(uuid.uuid4())
         request.state.request_id = request_id
-        
+
         start_time = time.time()
         client_ip = self.get_client_ip(request)
-        
+
         # Log request
         log_performance_metric(
             "http_request_started",
@@ -183,15 +182,15 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             method=request.method,
             path=request.url.path,
             client_ip=client_ip,
-            request_id=request_id
+            request_id=request_id,
         )
-        
+
         try:
             response = await call_next(request)
-            
+
             # Calculate processing time
             processing_time = time.time() - start_time
-            
+
             # Log response
             log_performance_metric(
                 "http_request_duration",
@@ -201,14 +200,14 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
                 path=request.url.path,
                 status_code=response.status_code,
                 client_ip=client_ip,
-                request_id=request_id
+                request_id=request_id,
             )
-            
+
             # Add request ID to response headers for debugging
             response.headers["X-Request-ID"] = request_id
-            
+
             return response
-            
+
         except Exception as e:
             # Log error
             processing_time = time.time() - start_time
@@ -220,10 +219,10 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
                 path=request.url.path,
                 processing_time=processing_time,
                 client_ip=client_ip,
-                request_id=request_id
+                request_id=request_id,
             )
             raise
-    
+
     def get_client_ip(self, request: Request) -> str:
         """Get client IP address, handling proxies."""
         forwarded = request.headers.get("X-Forwarded-For")
@@ -234,7 +233,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
 def setup_middleware(app: FastAPI) -> None:
     """Set up all middleware for the application."""
-    
+
     # CORS middleware (must be first)
     app.add_middleware(
         CORSMiddleware,
@@ -243,16 +242,16 @@ def setup_middleware(app: FastAPI) -> None:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    
+
     # Trusted host middleware
     app.add_middleware(
         TrustedHostMiddleware,
-        allowed_hosts=["*"]  # Configure appropriately for production
+        allowed_hosts=["*"],  # Configure appropriately for production
     )
-    
+
     # Session middleware (if needed)
     # app.add_middleware(SessionMiddleware, secret_key=settings.jwt_secret_key)
-    
+
     # Custom middleware (order matters - last added is executed first)
     app.add_middleware(RequestLoggingMiddleware)
     app.add_middleware(RateLimitMiddleware)

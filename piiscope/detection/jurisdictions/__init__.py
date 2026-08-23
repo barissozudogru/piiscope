@@ -12,17 +12,18 @@ The combine_jurisdictions() helper merges multiple profiles into a unified
 compliance matrix keyed by rule_id, so callers can pass a list of applicable
 jurisdictions and receive a single view of all obligations.
 """
+
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any
 
-from .gdpr import PROFILE as GDPR_PROFILE
 from .ccpa import PROFILE as CCPA_PROFILE
+from .gdpr import PROFILE as GDPR_PROFILE
 from .kvkk import PROFILE as KVKK_PROFILE
 from .lgpd import PROFILE as LGPD_PROFILE
 
 # Registry of all supported jurisdiction profiles
-JURISDICTION_PROFILES: Dict[str, Dict[str, Any]] = {
+JURISDICTION_PROFILES: dict[str, dict[str, Any]] = {
     "GDPR": GDPR_PROFILE,
     "CCPA": CCPA_PROFILE,
     "KVKK": KVKK_PROFILE,
@@ -41,8 +42,8 @@ __all__ = [
 
 
 def combine_jurisdictions(
-    jurisdiction_names: List[str],
-) -> Dict[str, List[Dict[str, Any]]]:
+    jurisdiction_names: list[str],
+) -> dict[str, list[dict[str, Any]]]:
     """Merge compliance profiles from multiple jurisdictions.
 
     Returns a dict keyed by rule_id. Each value is a list of jurisdiction
@@ -61,7 +62,7 @@ def combine_jurisdictions(
             ...
         }
     """
-    merged: Dict[str, List[Dict[str, Any]]] = {}
+    merged: dict[str, list[dict[str, Any]]] = {}
     for jname in jurisdiction_names:
         profile = JURISDICTION_PROFILES.get(jname.upper())
         if profile is None:
@@ -74,9 +75,9 @@ def combine_jurisdictions(
 
 
 def get_applicable_jurisdictions(
-    rule_ids: List[str],
-    jurisdictions: List[str] | None = None,
-) -> Dict[str, List[str]]:
+    rule_ids: list[str],
+    jurisdictions: list[str] | None = None,
+) -> dict[str, list[str]]:
     """Return the jurisdictions under which each rule_id has compliance obligations.
 
     If jurisdictions is None, all known profiles are checked.
@@ -87,7 +88,7 @@ def get_applicable_jurisdictions(
     if jurisdictions is None:
         jurisdictions = list(JURISDICTION_PROFILES.keys())
 
-    result: Dict[str, List[str]] = {}
+    result: dict[str, list[str]] = {}
     for rule_id in rule_ids:
         applicable = []
         for jname in jurisdictions:

@@ -1,4 +1,5 @@
 """Utility functions for security, encryption and common helpers."""
+
 from __future__ import annotations
 
 import base64
@@ -7,38 +8,38 @@ import json
 import os
 import secrets
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, Optional
+from typing import Any
 
-from jose import jwt
-from passlib.context import CryptContext
+import bcrypt
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from fastapi import UploadFile
+from jose import jwt
 
 from .config import settings
-from .exceptions import ConfigurationError
+from .exceptions import ConfigurationError, ValidationError
 
-
-# Password hashing context (bcrypt with stronger settings)
-pwd_context = CryptContext(
-    schemes=["bcrypt"], 
-    deprecated="auto",
-    bcrypt__rounds=12  # Increase rounds for better security
-)
+# bcrypt cost factor for password hashing
+_BCRYPT_ROUNDS = 12
 
 
 def get_password_hash(password: str) -> str:
-    """Hash a password using bcrypt with strong settings."""
+    """Hash a password using bcrypt with a strong cost factor."""
     if not password:
         raise ValueError("Password cannot be empty")
-    return pwd_context.hash(password)
+    hashed = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt(rounds=_BCRYPT_ROUNDS))
+    return hashed.decode("utf-8")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a password against its hash."""
+    """Verify a password against its bcrypt hash."""
     if not plain_password or not hashed_password:
         return False
-    return pwd_context.verify(plain_password, hashed_password)
+    try:
+        return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
+    except ValueError:
+        return False
 
 
 def generate_secure_random_string(length: int = 32) -> str:
@@ -51,11 +52,11 @@ def generate_api_key() -> str:
     return f"pk_{generate_secure_random_string(32)}"
 
 
-def hash_sensitive_data(data: str, salt: Optional[bytes] = None) -> tuple[str, bytes]:
+def hash_sensitive_data(data: str, salt: bytes | None = None) -> tuple[str, bytes]:
     """Hash sensitive data with a salt for storage."""
     if salt is None:
         salt = os.urandom(32)
-    
+
     # Use PBKDF2 for hashing sensitive data
     kdf = PBKDF2HMAC(
         algorithm=hashes.SHA256(),
@@ -63,11 +64,11 @@ def hash_sensitive_data(data: str, salt: Optional[bytes] = None) -> tuple[str, b
         salt=salt,
         iterations=100000,
     )
-    hashed = kdf.derive(data.encode('utf-8'))
-    return base64.urlsafe_b64encode(hashed).decode('utf-8'), salt
+    hashed = kdf.derive(data.encode("utf-8"))
+    return base64.urlsafe_b64encode(hashed).decode("utf-8"), salt
 
 
-def create_access_token(data: Dict[str, Any], expires_delta: timedelta) -> str:
+def create_access_token(data: dict[str, Any], expires_delta: timedelta) -> str:
     """Create a JWT access token containing the given data.
 
     :param data: Dictionary of claims to include in the token.
@@ -86,7 +87,7 @@ def _get_fernet() -> Fernet:
     try:
         return Fernet(settings.encryption_key.encode())
     except Exception as e:
-        raise ConfigurationError(f"Invalid encryption key: {str(e)}")
+        raise ConfigurationError(f"Invalid encryption key: {str(e)}") from e
 
 
 def encrypt_value(value: str) -> str:
@@ -97,7 +98,7 @@ def encrypt_value(value: str) -> str:
     except ConfigurationError:
         raise
     except Exception as e:
-        raise ConfigurationError(f"Failed to encrypt value: {str(e)}")
+        raise ConfigurationError(f"Failed to encrypt value: {str(e)}") from e
 
 
 def decrypt_value(token: str) -> str:
@@ -108,7 +109,7 @@ def decrypt_value(token: str) -> str:
     except ConfigurationError:
         raise
     except Exception as e:
-        raise ConfigurationError(f"Failed to decrypt value: {str(e)}")
+        raise ConfigurationError(f"Failed to decrypt value: {str(e)}") from e
 
 
 def encrypt_bytes(data: bytes) -> bytes:
@@ -119,7 +120,7 @@ def encrypt_bytes(data: bytes) -> bytes:
     except ConfigurationError:
         raise
     except Exception as e:
-        raise ConfigurationError(f"Failed to encrypt data: {str(e)}")
+        raise ConfigurationError(f"Failed to encrypt data: {str(e)}") from e
 
 
 def decrypt_bytes(data: bytes) -> bytes:
@@ -130,32 +131,44 @@ def decrypt_bytes(data: bytes) -> bytes:
     except ConfigurationError:
         raise
     except Exception as e:
-        raise ConfigurationError(f"Failed to decrypt data: {str(e)}")
+        raise ConfigurationError(f"Failed to decrypt data: {str(e)}") from e
 
 
 def secure_compare(a: str, b: str) -> bool:
     """Timing-safe string comparison."""
-    return secrets.compare_digest(a.encode('utf-8'), b.encode('utf-8'))
+    return secrets.compare_digest(a.encode("utf-8"), b.encode("utf-8"))
 
 
 def sanitize_for_log(data: str, max_length: int = 100) -> str:
     """Sanitize data for safe logging (remove sensitive info, truncate)."""
-    # Remove potential sensitive patterns
-    import re
-    
-    # Remove email-like patterns
-    data = re.sub(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', '[EMAIL]', data)
-    
-    # Remove phone-like patterns
-    data = re.sub(r'\b\d{3}[-.]?\d{3}[-.]?\d{4}\b', '[PHONE]', data)
-    
-    # Remove SSN-like patterns
-    data = re.sub(r'\b\d{3}-\d{2}-\d{4}\b', '[SSN]', data)
-    
-    # Truncate if too long
+    try:
+        from piiscope.detection.regex_patterns import PATTERNS
+
+        # Mapping of pattern keys to log replacements
+        # emails, phone numbers, IBANs, card numbers and national ids
+        replacements = {
+            "email": "[EMAIL]",
+            "credit_card": "[CREDIT_CARD]",
+            "iban": "[IBAN]",
+            "tc_kimlik": "[NATIONAL_ID]",
+            "national_id": "[NATIONAL_ID]",
+            "us_ssn": "[NATIONAL_ID]",
+            "eu_phone": "[PHONE]",
+            "us_phone": "[PHONE]",
+            "tr_phone": "[PHONE]",
+            "tr_phone_strict": "[PHONE]",
+        }
+
+        for rule_id, replacement in replacements.items():
+            if rule_id in PATTERNS:
+                # PATTERNS[rule_id].pattern is a compiled regex
+                data = PATTERNS[rule_id].pattern.sub(replacement, data)
+    except ImportError:
+        pass  # Fallback if piiscope isn't available
+
     if len(data) > max_length:
         data = data[:max_length] + "..."
-    
+
     return data
 
 
@@ -164,20 +177,40 @@ def validate_file_hash(file_path: str, expected_hash: str, algorithm: str = "sha
     hash_func = getattr(hashlib, algorithm, None)
     if not hash_func:
         raise ValueError(f"Unsupported hash algorithm: {algorithm}")
-    
+
     hasher = hash_func()
-    with open(file_path, 'rb') as f:
+    with open(file_path, "rb") as f:
         for chunk in iter(lambda: f.read(4096), b""):
             hasher.update(chunk)
-    
+
     return secure_compare(hasher.hexdigest(), expected_hash)
 
 
 def read_json_file(path: str) -> Any:
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         return json.load(f)
 
 
 def write_json_file(path: str, obj: Any) -> None:
     with open(path, "w", encoding="utf-8") as f:
         json.dump(obj, f, indent=2)
+
+
+async def stream_upload_to_disk(file: UploadFile, file_path: str, max_bytes: int) -> None:
+    """Stream an uploaded file to disk, enforcing a maximum size limit.
+
+    Aborts and removes the partial file if the limit is exceeded.
+    """
+    received = 0
+    with open(file_path, "wb") as out_file:
+        chunk_size = 1024 * 1024  # 1 MB chunks
+        while True:
+            chunk = await file.read(chunk_size)
+            if not chunk:
+                break
+            received += len(chunk)
+            if received > max_bytes:
+                out_file.close()
+                os.remove(file_path)
+                raise ValidationError(f"File size exceeds max {max_bytes // (1024 * 1024)} MB")
+            out_file.write(chunk)

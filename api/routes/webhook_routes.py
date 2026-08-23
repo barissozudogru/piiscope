@@ -4,17 +4,16 @@ Provides CRUD operations for webhook registrations plus a test-delivery
 endpoint.  All routes require authentication; ADMIN or SUPER_ADMIN role
 is required to create, update or delete webhooks.
 """
+
 from __future__ import annotations
 
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel, HttpUrl
-from sqlalchemy.orm import Session
 
 from .. import auth, models
-from ..database import get_db
 from ..services.webhook_service import (
     WebhookEvent,
     WebhookRegistration,
@@ -33,25 +32,26 @@ _webhook_service = WebhookService()
 # Request / response schemas
 # ---------------------------------------------------------------------------
 
+
 class WebhookCreate(BaseModel):
     url: HttpUrl
-    events: List[WebhookEvent]
-    secret: Optional[str] = None
+    events: list[WebhookEvent]
+    secret: str | None = None
     description: str = ""
 
 
 class WebhookUpdate(BaseModel):
-    url: Optional[HttpUrl] = None
-    events: Optional[List[WebhookEvent]] = None
-    secret: Optional[str] = None
-    enabled: Optional[bool] = None
-    description: Optional[str] = None
+    url: HttpUrl | None = None
+    events: list[WebhookEvent] | None = None
+    secret: str | None = None
+    enabled: bool | None = None
+    description: str | None = None
 
 
 class WebhookOut(BaseModel):
     id: str
     url: str
-    events: List[str]
+    events: list[str]
     enabled: bool
     description: str
 
@@ -60,12 +60,13 @@ class WebhookTestOut(BaseModel):
     success: bool
     delivered: int
     failed: int
-    details: List[Dict[str, Any]]
+    details: list[dict[str, Any]]
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _reg_to_out(reg: WebhookRegistration) -> WebhookOut:
     return WebhookOut(
@@ -81,10 +82,11 @@ def _reg_to_out(reg: WebhookRegistration) -> WebhookOut:
 # Endpoints
 # ---------------------------------------------------------------------------
 
-@router.get("/", response_model=List[WebhookOut])
+
+@router.get("/", response_model=list[WebhookOut])
 async def list_webhooks(
     current_user: models.User = Depends(auth.get_current_user),
-) -> List[WebhookOut]:
+) -> list[WebhookOut]:
     """List all registered webhooks (admin only)."""
     if current_user.role not in (models.RoleEnum.ADMIN, models.RoleEnum.SUPER_ADMIN):
         raise HTTPException(
@@ -149,16 +151,21 @@ async def update_webhook(
     return _reg_to_out(reg)
 
 
-@router.delete("/{webhook_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{webhook_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+)
 async def delete_webhook(
     webhook_id: str,
     current_user: models.User = Depends(
         auth.role_required(models.RoleEnum.ADMIN, models.RoleEnum.SUPER_ADMIN)
     ),
-) -> None:
+) -> Response:
     """Delete a webhook registration."""
     if not _webhook_service.deregister(webhook_id):
         raise HTTPException(status_code=404, detail="Webhook not found")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post("/{webhook_id}/test", response_model=WebhookTestOut)
@@ -202,6 +209,7 @@ async def test_webhook(
 # ---------------------------------------------------------------------------
 # Expose the singleton so other modules can dispatch events
 # ---------------------------------------------------------------------------
+
 
 def get_webhook_service() -> WebhookService:
     """FastAPI dependency that returns the module-level WebhookService."""

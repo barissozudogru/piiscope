@@ -12,13 +12,14 @@ Remediation status (open, in_progress, resolved) is tracked per finding ID
 via RemediationTracker.  The tracker operates in-memory but its state can be
 serialised to / from a plain dict for persistence by the caller.
 """
+
 from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +33,7 @@ class EffortLevel(str, Enum):
     HIGH = "high"
 
 
-_EFFORT_RANK: Dict[str, int] = {
+_EFFORT_RANK: dict[str, int] = {
     EffortLevel.LOW: 1,
     EffortLevel.MEDIUM: 2,
     EffortLevel.HIGH: 3,
@@ -52,34 +53,34 @@ class RemediationStatus(str, Enum):
 # Built-in remediation templates
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class RemediationTemplate:
     rule_id: str
     title: str
-    steps: List[str]
+    steps: list[str]
     code_snippet: str
     effort: EffortLevel
-    references: List[str] = field(default_factory=list)
+    references: list[str] = field(default_factory=list)
 
 
-_TEMPLATES: Dict[str, RemediationTemplate] = {
+_TEMPLATES: dict[str, RemediationTemplate] = {
     "us_ssn": RemediationTemplate(
         rule_id="us_ssn",
         title="Mask or tokenise US Social Security Numbers",
         steps=[
             "Identify all columns and tables storing raw SSNs.",
-            "Replace stored SSNs with format-preserving tokens "
-            "or store only the last four digits.",
+            "Replace stored SSNs with format-preserving tokens or store only the last four digits.",
             "Enforce column-level encryption (e.g. pgcrypto) for any "
             "column that must retain the full SSN.",
             "Restrict SELECT access to authorised roles only.",
             "Audit all application code paths that read SSN columns.",
         ],
         code_snippet=(
-            "# Python – format-preserving SSN masking\n"
+            "# Python - format-preserving SSN masking\n"
             "import re\n\n"
             "def mask_ssn(ssn: str) -> str:\n"
-            "    \"\"\"Replace SSN digits with asterisks, retaining last 4.\"\"\"\n"
+            '    """Replace SSN digits with asterisks, retaining last 4."""\n'
             "    clean = re.sub(r'\\D', '', ssn)\n"
             "    if len(clean) == 9:\n"
             "        return f'***-**-{clean[-4:]}'\n"
@@ -88,7 +89,6 @@ _TEMPLATES: Dict[str, RemediationTemplate] = {
         effort=EffortLevel.HIGH,
         references=["https://www.ssa.gov/privacy/", "GDPR Art. 25"],
     ),
-
     "tc_kimlik": RemediationTemplate(
         rule_id="tc_kimlik",
         title="Protect Turkish TC identity numbers",
@@ -99,7 +99,7 @@ _TEMPLATES: Dict[str, RemediationTemplate] = {
             "Provide a pseudonymised ID (UUID) for all internal processing.",
         ],
         code_snippet=(
-            "# Python – pseudonymise TC Kimlik\n"
+            "# Python - pseudonymise TC Kimlik\n"
             "import hashlib, hmac, os\n\n"
             "_SECRET = os.environ['TC_HASH_SECRET'].encode()\n\n"
             "def pseudonymise_tc(tc: str) -> str:\n"
@@ -108,20 +108,18 @@ _TEMPLATES: Dict[str, RemediationTemplate] = {
         effort=EffortLevel.HIGH,
         references=["KVKK Art. 6", "GDPR Art. 9"],
     ),
-
     "credit_card": RemediationTemplate(
         rule_id="credit_card",
         title="Tokenise credit card PANs (PCI-DSS Req. 3)",
         steps=[
             "Remove raw PANs from logs and reports immediately.",
-            "Integrate a PCI-compliant tokenisation vault "
-            "(e.g. Stripe, Braintree, Vault).",
+            "Integrate a PCI-compliant tokenisation vault (e.g. Stripe, Braintree, Vault).",
             "Display only the last four digits in UI.",
             "Ensure no PAN is stored in application logs.",
             "Run PCI-DSS SAQ or full QSA assessment.",
         ],
         code_snippet=(
-            "# Python – store only last-four and card type\n"
+            "# Python - store only last-four and card type\n"
             "def sanitise_card(pan: str) -> dict:\n"
             "    digits = pan.replace(' ', '').replace('-', '')\n"
             "    return {\n"
@@ -132,7 +130,6 @@ _TEMPLATES: Dict[str, RemediationTemplate] = {
         effort=EffortLevel.HIGH,
         references=["PCI-DSS v4.0 Req. 3", "https://www.pcisecuritystandards.org/"],
     ),
-
     "iban": RemediationTemplate(
         rule_id="iban",
         title="Encrypt or mask IBAN bank account numbers",
@@ -143,7 +140,7 @@ _TEMPLATES: Dict[str, RemediationTemplate] = {
             "Restrict access to the decryption key via IAM policies.",
         ],
         code_snippet=(
-            "# Python – IBAN masking for display\n"
+            "# Python - IBAN masking for display\n"
             "def mask_iban(iban: str) -> str:\n"
             "    clean = iban.replace(' ', '').upper()\n"
             "    if len(clean) < 8:\n"
@@ -153,7 +150,6 @@ _TEMPLATES: Dict[str, RemediationTemplate] = {
         effort=EffortLevel.MEDIUM,
         references=["GDPR Art. 32", "EBA Guidelines on ICT Risk"],
     ),
-
     "email": RemediationTemplate(
         rule_id="email",
         title="Pseudonymise or hash email addresses",
@@ -164,7 +160,7 @@ _TEMPLATES: Dict[str, RemediationTemplate] = {
             "beyond the original consent scope.",
         ],
         code_snippet=(
-            "# Python – keyed email hash for pseudonymisation\n"
+            "# Python - keyed email hash for pseudonymisation\n"
             "import hashlib, hmac, os\n\n"
             "_KEY = os.environ['EMAIL_HASH_KEY'].encode()\n\n"
             "def hash_email(email: str) -> str:\n"
@@ -173,7 +169,6 @@ _TEMPLATES: Dict[str, RemediationTemplate] = {
         effort=EffortLevel.LOW,
         references=["GDPR Art. 25", "GDPR Recital 26"],
     ),
-
     "medical_record": RemediationTemplate(
         rule_id="medical_record",
         title="Restrict and encrypt medical record numbers (HIPAA)",
@@ -185,7 +180,7 @@ _TEMPLATES: Dict[str, RemediationTemplate] = {
             "Conduct a HIPAA Security Risk Assessment.",
         ],
         code_snippet=(
-            "# SQL – column-level encryption with pgcrypto (PostgreSQL)\n"
+            "# SQL - column-level encryption with pgcrypto (PostgreSQL)\n"
             "-- Encrypt:\n"
             "UPDATE patients\n"
             "SET mrn_encrypted = pgp_sym_encrypt(mrn::text, current_setting('app.mrn_key'))\n"
@@ -197,7 +192,6 @@ _TEMPLATES: Dict[str, RemediationTemplate] = {
         effort=EffortLevel.HIGH,
         references=["HIPAA Security Rule 45 CFR §164.312", "NIST SP 800-111"],
     ),
-
     "passport": RemediationTemplate(
         rule_id="passport",
         title="Minimise passport data storage",
@@ -207,9 +201,9 @@ _TEMPLATES: Dict[str, RemediationTemplate] = {
             "Implement a data retention policy and automated deletion.",
         ],
         code_snippet=(
-            "# Python – redact passport number after verification\n"
+            "# Python - redact passport number after verification\n"
             "def redact_passport(number: str) -> str:\n"
-            "    \"\"\"Keep first 2 and last 2 chars, redact the rest.\"\"\"\n"
+            '    """Keep first 2 and last 2 chars, redact the rest."""\n'
             "    if len(number) <= 4:\n"
             "        return '****'\n"
             "    return number[:2] + '*' * (len(number) - 4) + number[-2:]\n"
@@ -217,7 +211,6 @@ _TEMPLATES: Dict[str, RemediationTemplate] = {
         effort=EffortLevel.MEDIUM,
         references=["GDPR Art. 5(1)(e)", "ICAO Doc 9303"],
     ),
-
     "eu_phone": RemediationTemplate(
         rule_id="eu_phone",
         title="Minimise and anonymise phone numbers",
@@ -227,7 +220,7 @@ _TEMPLATES: Dict[str, RemediationTemplate] = {
             "Hash phone numbers used as lookup keys.",
         ],
         code_snippet=(
-            "# Python – partial phone masking\n"
+            "# Python - partial phone masking\n"
             "import re\n\n"
             "def mask_phone(phone: str) -> str:\n"
             "    digits = re.sub(r'\\D', '', phone)\n"
@@ -238,7 +231,6 @@ _TEMPLATES: Dict[str, RemediationTemplate] = {
         effort=EffortLevel.LOW,
         references=["GDPR Art. 5"],
     ),
-
     "ipv4_address": RemediationTemplate(
         rule_id="ipv4_address",
         title="Anonymise IP addresses in logs",
@@ -248,7 +240,7 @@ _TEMPLATES: Dict[str, RemediationTemplate] = {
             "Consider using differential privacy techniques for analytics.",
         ],
         code_snippet=(
-            "# Python – last-octet zeroing for GDPR IP anonymisation\n"
+            "# Python - last-octet zeroing for GDPR IP anonymisation\n"
             "def anonymise_ipv4(ip: str) -> str:\n"
             "    parts = ip.split('.')\n"
             "    if len(parts) == 4:\n"
@@ -258,7 +250,6 @@ _TEMPLATES: Dict[str, RemediationTemplate] = {
         effort=EffortLevel.LOW,
         references=["GDPR WP29 Opinion 1/2008 on IP addresses"],
     ),
-
     "vat": RemediationTemplate(
         rule_id="vat",
         title="Control access to VAT registration numbers",
@@ -268,7 +259,7 @@ _TEMPLATES: Dict[str, RemediationTemplate] = {
             "Remove from public-facing reports and API responses.",
         ],
         code_snippet=(
-            "# Python – mask VAT number for display\n"
+            "# Python - mask VAT number for display\n"
             "def mask_vat(vat: str) -> str:\n"
             "    if len(vat) <= 4:\n"
             "        return '****'\n"
@@ -277,7 +268,6 @@ _TEMPLATES: Dict[str, RemediationTemplate] = {
         effort=EffortLevel.LOW,
         references=["EU VAT Directive 2006/112/EC"],
     ),
-
     "national_id": RemediationTemplate(
         rule_id="national_id",
         title="Protect national identity documents",
@@ -287,7 +277,7 @@ _TEMPLATES: Dict[str, RemediationTemplate] = {
             "Log all access and set retention limits.",
         ],
         code_snippet=(
-            "# Python – hash national ID for pseudonymisation\n"
+            "# Python - hash national ID for pseudonymisation\n"
             "import hashlib, hmac, os\n\n"
             "_KEY = os.environ['NID_HASH_KEY'].encode()\n\n"
             "def hash_national_id(nid: str) -> str:\n"
@@ -315,13 +305,14 @@ _FALLBACK_TEMPLATE = RemediationTemplate(
         "# 3. If required, encrypt before storing\n"
     ),
     effort=EffortLevel.MEDIUM,
-    references=["GDPR Art. 5(1)(c) – Data Minimisation"],
+    references=["GDPR Art. 5(1)(c) - Data Minimisation"],
 )
 
 
 # ---------------------------------------------------------------------------
 # Suggestion output
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class RemediationSuggestion:
@@ -330,16 +321,17 @@ class RemediationSuggestion:
     column_name: str
     risk_score: float
     title: str
-    steps: List[str]
+    steps: list[str]
     code_snippet: str
     effort: EffortLevel
-    references: List[str]
+    references: list[str]
     status: RemediationStatus = RemediationStatus.OPEN
 
 
 # ---------------------------------------------------------------------------
 # Main service
 # ---------------------------------------------------------------------------
+
 
 class RemediationService:
     """Generate and prioritise remediation suggestions for scan findings."""
@@ -369,9 +361,9 @@ class RemediationService:
 
     def suggest_for_scan(
         self,
-        findings: List[Dict[str, Any]],
-        risk_scores: Optional[Dict[Any, float]] = None,
-    ) -> List[RemediationSuggestion]:
+        findings: list[dict[str, Any]],
+        risk_scores: dict[Any, float] | None = None,
+    ) -> list[RemediationSuggestion]:
         """Generate prioritised suggestions for all findings in a scan.
 
         Parameters
@@ -388,7 +380,7 @@ class RemediationService:
         List of RemediationSuggestion sorted by descending risk score then
         ascending effort.
         """
-        suggestions: List[RemediationSuggestion] = []
+        suggestions: list[RemediationSuggestion] = []
         risk_scores = risk_scores or {}
 
         for f in findings:
@@ -408,7 +400,7 @@ class RemediationService:
 
         # Deduplicate by rule_id to avoid showing the same fix multiple times,
         # keeping the entry with the highest risk score for that rule.
-        seen_rules: Dict[str, RemediationSuggestion] = {}
+        seen_rules: dict[str, RemediationSuggestion] = {}
         for s in suggestions:
             if s.rule_id not in seen_rules or s.risk_score > seen_rules[s.rule_id].risk_score:
                 seen_rules[s.rule_id] = s
@@ -416,12 +408,10 @@ class RemediationService:
         deduped = list(seen_rules.values())
 
         # Sort: descending risk score, then ascending effort
-        deduped.sort(
-            key=lambda s: (-s.risk_score, _EFFORT_RANK.get(s.effort.value, 2))
-        )
+        deduped.sort(key=lambda s: (-s.risk_score, _EFFORT_RANK.get(s.effort.value, 2)))
         return deduped
 
-    def to_dict(self, suggestion: RemediationSuggestion) -> Dict[str, Any]:
+    def to_dict(self, suggestion: RemediationSuggestion) -> dict[str, Any]:
         """Serialise a suggestion to a plain dict."""
         return {
             "finding_id": suggestion.finding_id,
@@ -441,6 +431,7 @@ class RemediationService:
 # Remediation tracker (in-memory, serialisable)
 # ---------------------------------------------------------------------------
 
+
 class RemediationTracker:
     """Track remediation status for individual findings.
 
@@ -450,7 +441,7 @@ class RemediationTracker:
 
     def __init__(self) -> None:
         # finding_id -> {status, updated_at, notes}
-        self._state: Dict[Any, Dict[str, Any]] = {}
+        self._state: dict[Any, dict[str, Any]] = {}
 
     def update(
         self,
@@ -463,9 +454,7 @@ class RemediationTracker:
             "updated_at": datetime.now(timezone.utc).isoformat(),
             "notes": notes,
         }
-        logger.info(
-            "Remediation status for finding %s set to %s", finding_id, status.value
-        )
+        logger.info("Remediation status for finding %s set to %s", finding_id, status.value)
 
     def get_status(self, finding_id: Any) -> RemediationStatus:
         entry = self._state.get(finding_id)
@@ -473,12 +462,12 @@ class RemediationTracker:
             return RemediationStatus.OPEN
         return RemediationStatus(entry["status"])
 
-    def dump(self) -> Dict[str, Any]:
+    def dump(self) -> dict[str, Any]:
         """Serialise state for external persistence."""
         return dict(self._state)
 
     @classmethod
-    def load(cls, data: Dict[str, Any]) -> "RemediationTracker":
+    def load(cls, data: dict[str, Any]) -> RemediationTracker:
         """Restore tracker state from a previously serialised dict."""
         tracker = cls()
         tracker._state = {k: v for k, v in data.items()}

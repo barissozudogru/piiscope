@@ -25,20 +25,21 @@ Usage::
         format="json",
     )
 """
+
 from __future__ import annotations
 
 import html
 import json
 import logging
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Mapping: data category -> GDPR Article 30 processing purpose template
 # ---------------------------------------------------------------------------
-_CATEGORY_PURPOSE_MAP: Dict[str, str] = {
+_CATEGORY_PURPOSE_MAP: dict[str, str] = {
     "PII": "Identity verification and service delivery",
     "PHI": "Healthcare provision and medical records management",
     "PCI": "Payment processing and financial transaction recording",
@@ -58,7 +59,7 @@ _LEGAL_BASIS = [
 ]
 
 # Retention recommendations by category
-_RETENTION_MAP: Dict[str, str] = {
+_RETENTION_MAP: dict[str, str] = {
     "PII": "Delete within 30 days of purpose fulfilment unless legally required",
     "PHI": "Retain per applicable healthcare regulations (typically 10 years)",
     "PCI": "Retain transaction records for max 12 months; PAN not to be stored",
@@ -78,10 +79,10 @@ class ComplianceReportGenerator:
     def generate(
         self,
         scan_id: int,
-        findings: List[Dict[str, Any]],
-        classified_inventory: List[Dict[str, Any]],
-        risk_summary: Optional[Dict[str, Any]] = None,
-        suggestions: Optional[List[Dict[str, Any]]] = None,
+        findings: list[dict[str, Any]],
+        classified_inventory: list[dict[str, Any]],
+        risk_summary: dict[str, Any] | None = None,
+        suggestions: list[dict[str, Any]] | None = None,
         format: str = "json",
         organisation: str = "Organisation",
         data_controller: str = "Data Controller",
@@ -135,13 +136,13 @@ class ComplianceReportGenerator:
     def _build_payload(
         self,
         scan_id: int,
-        findings: List[Dict[str, Any]],
-        classified_inventory: List[Dict[str, Any]],
-        risk_summary: Dict[str, Any],
-        suggestions: List[Dict[str, Any]],
+        findings: list[dict[str, Any]],
+        classified_inventory: list[dict[str, Any]],
+        risk_summary: dict[str, Any],
+        suggestions: list[dict[str, Any]],
         organisation: str,
         data_controller: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         generated_at = datetime.now(timezone.utc).isoformat()
         ropa = self._build_ropa(classified_inventory, organisation, data_controller)
         dpia = self._build_dpia(scan_id, findings, classified_inventory, risk_summary)
@@ -166,10 +167,10 @@ class ComplianceReportGenerator:
 
     def _build_ropa(
         self,
-        inventory: List[Dict[str, Any]],
+        inventory: list[dict[str, Any]],
         organisation: str,
         data_controller: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Build GDPR Article 30 Records of Processing Activities."""
         processing_activities = []
 
@@ -179,15 +180,11 @@ class ComplianceReportGenerator:
                 "data_category": cat,
                 "data_types_detected": entry["sub_labels"],
                 "columns_affected": entry["column_names"],
-                "purpose_of_processing": _CATEGORY_PURPOSE_MAP.get(
-                    cat, "Not specified"
-                ),
+                "purpose_of_processing": _CATEGORY_PURPOSE_MAP.get(cat, "Not specified"),
                 "legal_basis": _LEGAL_BASIS[1],  # default: contract
-                "retention_recommendation": _RETENTION_MAP.get(
-                    cat, "Per organisational policy"
-                ),
+                "retention_recommendation": _RETENTION_MAP.get(cat, "Per organisational policy"),
                 "security_measures": self._default_security_measures(cat),
-                "international_transfers": "Not identified – verify with DPO",
+                "international_transfers": "Not identified - verify with DPO",
                 "recipients": "Internal systems and authorised processors",
             }
             processing_activities.append(activity)
@@ -206,10 +203,10 @@ class ComplianceReportGenerator:
     def _build_dpia(
         self,
         scan_id: int,
-        findings: List[Dict[str, Any]],
-        inventory: List[Dict[str, Any]],
-        risk_summary: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        findings: list[dict[str, Any]],
+        inventory: list[dict[str, Any]],
+        risk_summary: dict[str, Any],
+    ) -> dict[str, Any]:
         """Build a DPIA skeleton (GDPR Article 35)."""
         categories = [e["category"] for e in inventory]
         high_risk = any(c in categories for c in ("PII", "PHI", "PCI"))
@@ -219,36 +216,46 @@ class ComplianceReportGenerator:
 
         risks = []
         if "PHI" in categories:
-            risks.append({
-                "risk": "Processing of health data without explicit consent",
-                "likelihood": "High",
-                "impact": "High",
-                "mitigation": "Obtain explicit consent; implement encryption and access controls",
-            })
+            risks.append(
+                {
+                    "risk": "Processing of health data without explicit consent",
+                    "likelihood": "High",
+                    "impact": "High",
+                    "mitigation": "Obtain explicit consent; "
+                    "implement encryption and access controls",
+                }
+            )
         if "PCI" in categories:
-            risks.append({
-                "risk": "Exposure of payment card data violating PCI-DSS",
-                "likelihood": "Medium",
-                "impact": "High",
-                "mitigation": "Tokenise PANs; engage QSA for PCI-DSS audit",
-            })
+            risks.append(
+                {
+                    "risk": "Exposure of payment card data violating PCI-DSS",
+                    "likelihood": "Medium",
+                    "impact": "High",
+                    "mitigation": "Tokenise PANs; engage QSA for PCI-DSS audit",
+                }
+            )
         if "PII" in categories:
-            risks.append({
-                "risk": "Unlawful processing of personal data under GDPR",
-                "likelihood": "Medium",
-                "impact": "High",
-                "mitigation": "Review legal basis; apply data minimisation; implement DSAR process",
-            })
+            risks.append(
+                {
+                    "risk": "Unlawful processing of personal data under GDPR",
+                    "likelihood": "Medium",
+                    "impact": "High",
+                    "mitigation": "Review legal basis; apply data minimisation; "
+                    "implement DSAR process",
+                }
+            )
         if aggregate_score >= 7.0:
-            risks.append({
-                "risk": "High aggregate risk score indicating systemic data exposure",
-                "likelihood": "High",
-                "impact": "High",
-                "mitigation": (
-                    "Prioritise critical and high findings for immediate remediation; "
-                    "engage security team"
-                ),
-            })
+            risks.append(
+                {
+                    "risk": "High aggregate risk score indicating systemic data exposure",
+                    "likelihood": "High",
+                    "impact": "High",
+                    "mitigation": (
+                        "Prioritise critical and high findings for immediate remediation; "
+                        "engage security team"
+                    ),
+                }
+            )
 
         return {
             "article": "GDPR Article 35",
@@ -279,7 +286,7 @@ class ComplianceReportGenerator:
         }
 
     @staticmethod
-    def _default_security_measures(category: str) -> List[str]:
+    def _default_security_measures(category: str) -> list[str]:
         base = [
             "Encryption at rest (AES-256)",
             "Encryption in transit (TLS 1.2+)",
@@ -301,11 +308,11 @@ class ComplianceReportGenerator:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _render_json(payload: Dict[str, Any]) -> str:
+    def _render_json(payload: dict[str, Any]) -> str:
         return json.dumps(payload, indent=2, default=str)
 
     @staticmethod
-    def _render_html(payload: Dict[str, Any]) -> str:
+    def _render_html(payload: dict[str, Any]) -> str:
         def esc(v: Any) -> str:
             return html.escape(str(v))
 
@@ -356,7 +363,7 @@ class ComplianceReportGenerator:
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Compliance Report – Scan {esc(str(payload['scan_id']))}</title>
+<title>Compliance Report - Scan {esc(str(payload["scan_id"]))}</title>
 <style>
   body {{ font-family: system-ui, sans-serif; margin: 2rem; color: #222; }}
   h1 {{ border-bottom: 2px solid #1a56db; padding-bottom: .5rem; }}
@@ -365,8 +372,10 @@ class ComplianceReportGenerator:
   table {{ border-collapse: collapse; width: 100%; margin: 1rem 0; }}
   th, td {{ border: 1px solid #d1d5db; padding: .5rem .75rem; text-align: left; font-size: .9rem; }}
   th {{ background: #f3f4f6; font-weight: 600; }}
-  .summary-grid {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 1rem 0; }}
-  .metric {{ background: #f0f9ff; border: 1px solid #bae6fd; border-radius: .5rem; padding: 1rem; text-align: center; }}
+  .summary-grid {{ display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 1rem; margin: 1rem 0; }}
+  .metric {{ background: #f0f9ff; border: 1px solid #bae6fd;
+    border-radius: .5rem; padding: 1rem; text-align: center; }}
   .metric h4 {{ margin: 0 0 .25rem; font-size: .85rem; color: #64748b; }}
   .metric span {{ font-size: 1.75rem; font-weight: 700; color: #0284c7; }}
   .badge {{ font-size: .7rem; padding: .15rem .4rem; border-radius: .25rem;
@@ -382,18 +391,18 @@ class ComplianceReportGenerator:
 </head>
 <body>
 <h1>Compliance Report</h1>
-<p><strong>Scan ID:</strong> {esc(str(payload['scan_id']))} &nbsp;|&nbsp;
-   <strong>Generated:</strong> {esc(payload['generated_at'])} &nbsp;|&nbsp;
-   <strong>Organisation:</strong> {esc(payload['organisation'])}</p>
+<p><strong>Scan ID:</strong> {esc(str(payload["scan_id"]))} &nbsp;|&nbsp;
+   <strong>Generated:</strong> {esc(payload["generated_at"])} &nbsp;|&nbsp;
+   <strong>Organisation:</strong> {esc(payload["organisation"])}</p>
 
 <h2>Executive Summary</h2>
 <div class="summary-grid">
-  <div class="metric"><h4>Total Findings</h4><span>{summary['total_findings']}</span></div>
-  <div class="metric"><h4>Aggregate Risk</h4><span>{summary['aggregate_risk_score']}</span></div>
-  <div class="metric"><h4>Critical Findings</h4><span>{summary['critical_findings']}</span></div>
+  <div class="metric"><h4>Total Findings</h4><span>{summary["total_findings"]}</span></div>
+  <div class="metric"><h4>Aggregate Risk</h4><span>{summary["aggregate_risk_score"]}</span></div>
+  <div class="metric"><h4>Critical Findings</h4><span>{summary["critical_findings"]}</span></div>
 </div>
 
-<h2>GDPR Article 30 – Records of Processing Activities</h2>
+<h2>GDPR Article 30 - Records of Processing Activities</h2>
 <div class="notice">This RoPA is auto-generated and must be reviewed by the DPO before use.</div>
 <table>
 <thead><tr>
@@ -402,22 +411,22 @@ class ComplianceReportGenerator:
 <tbody>{activities_rows}</tbody>
 </table>
 
-<h2>DPIA – Risk Assessment (GDPR Article 35)</h2>
-<p><strong>DPIA Required:</strong> {esc(str(dpia['dpia_required']))} &nbsp;|&nbsp;
-   <strong>DPO Consultation Required:</strong> {esc(str(dpia['dpo_consultation_required']))}</p>
+<h2>DPIA - Risk Assessment (GDPR Article 35)</h2>
+<p><strong>DPIA Required:</strong> {esc(str(dpia["dpia_required"]))} &nbsp;|&nbsp;
+   <strong>DPO Consultation Required:</strong> {esc(str(dpia["dpo_consultation_required"]))}</p>
 <table>
 <thead><tr><th>Risk</th><th>Likelihood</th><th>Impact</th><th>Mitigation</th></tr></thead>
 <tbody>{risks_rows}</tbody>
 </table>
 
 <h2>Remediation Recommendations</h2>
-{remediation_items if remediation_items else '<p>No remediation recommendations generated.</p>'}
+{remediation_items if remediation_items else "<p>No remediation recommendations generated.</p>"}
 
 </body>
 </html>"""
 
     @staticmethod
-    def _render_markdown(payload: Dict[str, Any]) -> str:
+    def _render_markdown(payload: dict[str, Any]) -> str:
         summary = payload["summary"]
         ropa = payload["gdpr_article_30_ropa"]
         dpia = payload["dpia"]
@@ -425,8 +434,8 @@ class ComplianceReportGenerator:
         generated_at = payload["generated_at"]
         scan_id = payload["scan_id"]
 
-        lines: List[str] = [
-            f"# Compliance Report – Scan {scan_id}",
+        lines: list[str] = [
+            f"# Compliance Report - Scan {scan_id}",
             "",
             f"**Generated:** {generated_at}  ",
             f"**Organisation:** {payload['organisation']}  ",
@@ -436,8 +445,8 @@ class ComplianceReportGenerator:
             "",
             "## Executive Summary",
             "",
-            f"| Metric | Value |",
-            f"|---|---|",
+            "| Metric | Value |",
+            "|---|---|",
             f"| Total Findings | {summary['total_findings']} |",
             f"| Aggregate Risk Score | {summary['aggregate_risk_score']} |",
             f"| Critical Findings | {summary['critical_findings']} |",
@@ -446,7 +455,7 @@ class ComplianceReportGenerator:
             "",
             "---",
             "",
-            "## GDPR Article 30 – Records of Processing Activities",
+            "## GDPR Article 30 - Records of Processing Activities",
             "",
             "> **Note:** This RoPA is auto-generated from scan results and must be reviewed "
             "and validated by the Data Protection Officer before use.",
@@ -468,7 +477,7 @@ class ComplianceReportGenerator:
             "",
             "---",
             "",
-            "## DPIA – Data Protection Impact Assessment (GDPR Article 35)",
+            "## DPIA - Data Protection Impact Assessment (GDPR Article 35)",
             "",
             f"**DPIA Required:** {dpia['dpia_required']}  ",
             f"**DPO Consultation:** {dpia['dpo_consultation_required']}  ",
@@ -481,9 +490,7 @@ class ComplianceReportGenerator:
         ]
 
         for r in dpia["risk_assessment"].get("risks_identified", []):
-            lines.append(
-                f"| {r['risk']} | {r['likelihood']} | {r['impact']} | {r['mitigation']} |"
-            )
+            lines.append(f"| {r['risk']} | {r['likelihood']} | {r['impact']} | {r['mitigation']} |")
 
         lines += [
             "",

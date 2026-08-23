@@ -1,0 +1,22 @@
+# Source: Curated
+# License: Public Domain
+# Retrieval Date: 2026-08-23
+# Record Count: 17
+# Rule: lowercase, one entry per line, ASCII-folded variants included
+clinic
+clinica
+clinique
+hastane
+hopital
+hospital
+hôpital
+kliniek
+klinik
+klinika
+klinikum
+krankenhaus
+medical center
+ospedale
+poliklinik
+szpital
+ziekenhuis

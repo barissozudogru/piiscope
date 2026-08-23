@@ -17,11 +17,148 @@ Structure mirrors GDPR closely but with Turkish-specific elements:
 
 TC Kimlik (Turkish national identity number) is a notable KVKK-specific requirement.
 """
+
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any
 
-PROFILE: Dict[str, Dict[str, Any]] = {
+PROFILE: dict[str, dict[str, Any]] = {
+    "ner_cardinal": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "ner_date": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "ner_loc": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "ner_org": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "ner_gpe": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "ner_person": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "url": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "vat_tr": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "vat_de": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "tr_phone_strict": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "iban_tr": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "passport_uk": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "passport_de": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "passport_tr": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "swift_bic": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "medical_condition": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "surname": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
     # ------------------------------------------------------------------
     # Ordinary personal data  (Art. 3, Art. 5)
     # ------------------------------------------------------------------
@@ -34,8 +171,13 @@ PROFILE: Dict[str, Dict[str, Any]] = {
             "a legal basis (Art. 5). Data must be accurate, proportionate, and "
             "retained only as long as necessary (Art. 4)."
         ),
-        "legal_basis": ["explicit_consent", "contract", "legal_obligation",
-                        "vital_interests", "legitimate_interest"],
+        "legal_basis": [
+            "explicit_consent",
+            "contract",
+            "legal_obligation",
+            "vital_interests",
+            "legitimate_interest",
+        ],
         "kvkk_board_decision": None,
     },
     "given_name": {
@@ -54,8 +196,7 @@ PROFILE: Dict[str, Dict[str, Any]] = {
         "severity": 0.5,
         "article": "Art. 3(1)(d), Art. 5",
         "obligation": (
-            "Phone numbers are personal data under KVKK. Processing requires "
-            "a legal basis."
+            "Phone numbers are personal data under KVKK. Processing requires a legal basis."
         ),
         "legal_basis": ["explicit_consent", "contract"],
         "kvkk_board_decision": None,
@@ -82,7 +223,6 @@ PROFILE: Dict[str, Dict[str, Any]] = {
         "legal_basis": ["explicit_consent", "contract"],
         "kvkk_board_decision": None,
     },
-
     # ------------------------------------------------------------------
     # TC Kimlik (Turkish national identity number)  - special focus
     # KVKK Board has issued guidance on TC Kimlik processing
@@ -111,7 +251,6 @@ PROFILE: Dict[str, Dict[str, Any]] = {
         "legal_basis": ["explicit_consent", "legal_obligation"],
         "kvkk_board_decision": None,
     },
-
     # ------------------------------------------------------------------
     # Financial data  (Art. 12 - security obligation)
     # ------------------------------------------------------------------
@@ -138,7 +277,6 @@ PROFILE: Dict[str, Dict[str, Any]] = {
         "legal_basis": ["contract", "legal_obligation"],
         "kvkk_board_decision": None,
     },
-
     # ------------------------------------------------------------------
     # Special categories  (Art. 6) - most sensitive under KVKK
     # Includes: race, ethnic origin, political opinion, philosophical belief,
@@ -182,7 +320,6 @@ PROFILE: Dict[str, Dict[str, Any]] = {
         "legal_basis": ["explicit_consent"],
         "kvkk_board_decision": None,
     },
-
     # ------------------------------------------------------------------
     # Passport / travel documents
     # ------------------------------------------------------------------
@@ -197,7 +334,6 @@ PROFILE: Dict[str, Dict[str, Any]] = {
         "legal_basis": ["legal_obligation", "explicit_consent"],
         "kvkk_board_decision": None,
     },
-
     # ------------------------------------------------------------------
     # Network identifiers
     # ------------------------------------------------------------------
@@ -217,13 +353,10 @@ PROFILE: Dict[str, Dict[str, Any]] = {
         "status": "required",
         "severity": 0.4,
         "article": "Art. 3(1)(d)",
-        "obligation": (
-            "IPv6 addresses are personal data. Apply same protections as IPv4."
-        ),
+        "obligation": ("IPv6 addresses are personal data. Apply same protections as IPv4."),
         "legal_basis": ["legitimate_interest", "legal_obligation"],
         "kvkk_board_decision": None,
     },
-
     # ------------------------------------------------------------------
     # Demographic
     # ------------------------------------------------------------------
@@ -238,7 +371,6 @@ PROFILE: Dict[str, Dict[str, Any]] = {
         "legal_basis": ["explicit_consent", "contract"],
         "kvkk_board_decision": None,
     },
-
     # ------------------------------------------------------------------
     # US SSN  (optional - only for cross-border data flows)
     # ------------------------------------------------------------------
@@ -253,7 +385,6 @@ PROFILE: Dict[str, Dict[str, Any]] = {
         "legal_basis": ["explicit_consent", "legal_obligation"],
         "kvkk_board_decision": None,
     },
-
     # ------------------------------------------------------------------
     # Financial VAT
     # ------------------------------------------------------------------

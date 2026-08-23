@@ -15,11 +15,148 @@ Each entry maps a detection rule_id to:
   - max_fine    : maximum GDPR fine tier applicable ("standard" = 2% global
                   turnover; "higher" = 4% global turnover).
 """
+
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any
 
-PROFILE: Dict[str, Dict[str, Any]] = {
+PROFILE: dict[str, dict[str, Any]] = {
+    "ner_cardinal": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "ner_date": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "ner_loc": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "ner_org": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "ner_gpe": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "ner_person": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "url": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "vat_tr": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "vat_de": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "tr_phone_strict": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "iban_tr": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "passport_uk": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "passport_de": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "passport_tr": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "swift_bic": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "medical_condition": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "surname": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
     # ------------------------------------------------------------------
     # Basic personal identifiers  (Art. 4(1) - personal data definition)
     # ------------------------------------------------------------------
@@ -39,13 +176,11 @@ PROFILE: Dict[str, Dict[str, Any]] = {
         "severity": 0.4,
         "article": "Art. 4(1), Art. 5(1)(c)",
         "obligation": (
-            "Names are personal data. Minimise collection and apply "
-            "appropriate retention limits."
+            "Names are personal data. Minimise collection and apply appropriate retention limits."
         ),
         "legal_basis": ["consent", "contract", "legitimate_interest"],
         "max_fine": "standard",
     },
-
     # ------------------------------------------------------------------
     # Contact information
     # ------------------------------------------------------------------
@@ -53,9 +188,7 @@ PROFILE: Dict[str, Dict[str, Any]] = {
         "status": "required",
         "severity": 0.5,
         "article": "Art. 4(1), Art. 5(1)(c)",
-        "obligation": (
-            "Phone numbers are personal data. Document purpose and retention."
-        ),
+        "obligation": ("Phone numbers are personal data. Document purpose and retention."),
         "legal_basis": ["consent", "contract", "legitimate_interest"],
         "max_fine": "standard",
     },
@@ -64,8 +197,7 @@ PROFILE: Dict[str, Dict[str, Any]] = {
         "severity": 0.4,
         "article": "Art. 4(1)",
         "obligation": (
-            "US phone numbers may relate to EU data subjects. "
-            "Apply GDPR if subject is EU-based."
+            "US phone numbers may relate to EU data subjects. Apply GDPR if subject is EU-based."
         ),
         "legal_basis": ["consent", "contract"],
         "max_fine": "standard",
@@ -78,7 +210,6 @@ PROFILE: Dict[str, Dict[str, Any]] = {
         "legal_basis": ["consent", "contract", "legitimate_interest"],
         "max_fine": "standard",
     },
-
     # ------------------------------------------------------------------
     # Financial data
     # ------------------------------------------------------------------
@@ -105,7 +236,6 @@ PROFILE: Dict[str, Dict[str, Any]] = {
         "legal_basis": ["contract", "legal_obligation"],
         "max_fine": "higher",
     },
-
     # ------------------------------------------------------------------
     # National identifiers  (Art. 87)
     # ------------------------------------------------------------------
@@ -143,7 +273,6 @@ PROFILE: Dict[str, Dict[str, Any]] = {
         "legal_basis": ["legal_obligation"],
         "max_fine": "higher",
     },
-
     # ------------------------------------------------------------------
     # Special categories  (Art. 9 - highest protection level)
     # ------------------------------------------------------------------
@@ -181,7 +310,6 @@ PROFILE: Dict[str, Dict[str, Any]] = {
         "legal_basis": ["explicit_consent", "healthcare"],
         "max_fine": "higher",
     },
-
     # ------------------------------------------------------------------
     # Passport / travel documents
     # ------------------------------------------------------------------
@@ -196,7 +324,6 @@ PROFILE: Dict[str, Dict[str, Any]] = {
         "legal_basis": ["legal_obligation", "public_interest"],
         "max_fine": "higher",
     },
-
     # ------------------------------------------------------------------
     # Network / technical identifiers  (Recital 30)
     # ------------------------------------------------------------------
@@ -223,7 +350,6 @@ PROFILE: Dict[str, Dict[str, Any]] = {
         "legal_basis": ["legitimate_interest", "legal_obligation"],
         "max_fine": "standard",
     },
-
     # ------------------------------------------------------------------
     # Demographic data
     # ------------------------------------------------------------------
@@ -238,7 +364,6 @@ PROFILE: Dict[str, Dict[str, Any]] = {
         "legal_basis": ["consent", "contract", "legitimate_interest"],
         "max_fine": "standard",
     },
-
     # ------------------------------------------------------------------
     # Financial VAT numbers
     # ------------------------------------------------------------------

@@ -13,12 +13,11 @@ performs the following steps:
 Run this script with `python sample_scan_script.py`.  You must have the
 ``requests`` library installed (``pip install requests``).
 """
+
 import os
 import time
-import json
 
 import requests
-
 
 API_BASE = os.environ.get("PRIVACY_API_BASE", "http://localhost:8000")
 USERNAME = os.environ.get("PRIVACY_ADMIN_USER", "admin")
@@ -48,7 +47,11 @@ def main():
         print("Creating default PII profile...")
         profile_def = {
             "regex_patterns": [
-                {"id": "email", "pattern": "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}", "severity": "medium"},
+                {
+                    "id": "email",
+                    "pattern": "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}",
+                    "severity": "medium",
+                },
             ],
             "quasi_identifiers": ["name", "dob"],
             "sensitive_attribute": "diagnosis",
@@ -71,7 +74,12 @@ def main():
     print(f"Uploading {sample_path}...")
     with open(sample_path, "rb") as f:
         files = {"file": ("medical_notes.csv", f, "text/csv")}
-        resp = requests.post(f"{API_BASE}/scan/upload", params={"profile_id": profile_id}, headers=headers, files=files)
+        resp = requests.post(
+            f"{API_BASE}/scan/upload",
+            params={"profile_id": profile_id},
+            headers=headers,
+            files=files,
+        )
     resp.raise_for_status()
     job = resp.json()
     job_id = job["id"]
@@ -83,7 +91,7 @@ def main():
         data = resp.json()
         status = data["status"]
         progress = data["progress"]
-        print(f"Status: {status}, progress {progress*100:.2f}%", end="\r")
+        print(f"Status: {status}, progress {progress * 100:.2f}%", end="\r")
         if status == "completed":
             break
         if status == "failed":

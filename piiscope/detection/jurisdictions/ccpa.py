@@ -1,6 +1,6 @@
 """CCPA (California Consumer Privacy Act) compliance profile.
 
-Regulation: California Civil Code §§ 1798.100 – 1798.199 (CCPA 2018),
+Regulation: California Civil Code §§ 1798.100 - 1798.199 (CCPA 2018),
 amended by CPRA 2020 (effective January 1 2023).
 Territorial scope: for-profit businesses that collect personal information
 of California residents exceeding specified thresholds.
@@ -30,11 +30,148 @@ Sensitive personal information (§ 1798.121):
   - Biometric information
   - Health / sex life / sexual orientation
 """
+
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any
 
-PROFILE: Dict[str, Dict[str, Any]] = {
+PROFILE: dict[str, dict[str, Any]] = {
+    "ner_cardinal": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "ner_date": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "ner_loc": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "ner_org": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "ner_gpe": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "ner_person": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "url": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "vat_tr": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "vat_de": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "tr_phone_strict": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "iban_tr": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "passport_uk": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "passport_de": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "passport_tr": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "swift_bic": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "medical_condition": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
+    "surname": {
+        "status": "optional",
+        "severity": 0.5,
+        "article": "General",
+        "obligation": ("Standard obligation"),
+        "legal_basis": ["legitimate_interest"],
+        "max_fine": "standard",
+    },
     # ------------------------------------------------------------------
     # Category A - Identifiers  (§ 1798.140(v)(A))
     # ------------------------------------------------------------------
@@ -55,8 +192,7 @@ PROFILE: Dict[str, Dict[str, Any]] = {
         "severity": 0.4,
         "article": "§ 1798.140(v)(A) - Identifier",
         "obligation": (
-            "Names are identifiers. Disclose in privacy notice; honour "
-            "consumer rights requests."
+            "Names are identifiers. Disclose in privacy notice; honour consumer rights requests."
         ),
         "consumer_rights": ["know", "delete", "opt_out_of_sale"],
         "is_sensitive": False,
@@ -77,13 +213,11 @@ PROFILE: Dict[str, Dict[str, Any]] = {
         "severity": 0.4,
         "article": "§ 1798.140(v)(A) - Identifier (IP address)",
         "obligation": (
-            "IPv6 addresses are identifiers under CCPA. Apply same obligations "
-            "as IPv4."
+            "IPv6 addresses are identifiers under CCPA. Apply same obligations as IPv4."
         ),
         "consumer_rights": ["know", "delete", "opt_out_of_sale"],
         "is_sensitive": False,
     },
-
     # ------------------------------------------------------------------
     # Contact information
     # ------------------------------------------------------------------
@@ -103,13 +237,11 @@ PROFILE: Dict[str, Dict[str, Any]] = {
         "severity": 0.4,
         "article": "§ 1798.140(v)(A)",
         "obligation": (
-            "Non-US phone numbers are still identifiers if they relate to "
-            "California residents."
+            "Non-US phone numbers are still identifiers if they relate to California residents."
         ),
         "consumer_rights": ["know", "delete"],
         "is_sensitive": False,
     },
-
     # ------------------------------------------------------------------
     # Category L - Sensitive personal information  (CPRA § 1798.121)
     # ------------------------------------------------------------------
@@ -147,7 +279,6 @@ PROFILE: Dict[str, Dict[str, Any]] = {
         "consumer_rights": ["know", "delete", "limit_use"],
         "is_sensitive": True,
     },
-
     # ------------------------------------------------------------------
     # Financial account numbers  (§ 1798.121(a))
     # ------------------------------------------------------------------
@@ -174,7 +305,6 @@ PROFILE: Dict[str, Dict[str, Any]] = {
         "consumer_rights": ["know", "delete", "limit_use"],
         "is_sensitive": True,
     },
-
     # ------------------------------------------------------------------
     # Health data  (§ 1798.121(a) - health and medical conditions)
     # ------------------------------------------------------------------
@@ -212,7 +342,6 @@ PROFILE: Dict[str, Dict[str, Any]] = {
         "consumer_rights": ["know", "delete"],
         "is_sensitive": False,
     },
-
     # ------------------------------------------------------------------
     # Demographic / quasi-identifiers
     # ------------------------------------------------------------------

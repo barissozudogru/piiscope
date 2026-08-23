@@ -4,14 +4,15 @@ These schemas define the shape of payloads accepted by the API and
 returned to clients.  They also serve as documentation in the
 auto‑generated OpenAPI spec (Swagger UI).
 """
+
 from __future__ import annotations
 
 from datetime import datetime
-from typing import List, Optional, Dict, Any
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
-from .models import RoleEnum, ScanStatus, DataSourceType, ConnectionStatus
+from .models import ConnectionStatus, DataSourceType, RoleEnum, ScanStatus
 
 
 class Token(BaseModel):
@@ -20,24 +21,24 @@ class Token(BaseModel):
 
 
 class TokenData(BaseModel):
-    username: Optional[str] = None
-    role: Optional[str] = None
+    username: str | None = None
+    role: str | None = None
 
 
 class UserBase(BaseModel):
     username: str
-    email: Optional[EmailStr] = None
+    email: EmailStr | None = None
 
 
 class UserCreate(UserBase):
     password: str
-    role: Optional[RoleEnum] = RoleEnum.USER
+    role: RoleEnum | None = RoleEnum.USER
 
 
 class UserUpdate(BaseModel):
-    email: Optional[EmailStr] = None
-    password: Optional[str] = None
-    role: Optional[RoleEnum] = None
+    email: EmailStr | None = None
+    password: str | None = None
+    role: RoleEnum | None = None
 
 
 class UserOut(UserBase):
@@ -51,9 +52,11 @@ class UserOut(UserBase):
 
 class ProfileBase(BaseModel):
     name: str
-    version: Optional[str] = "1.0"
-    description: Optional[str] = None
-    definition: Dict[str, Any] = Field(..., description="Profile definition containing patterns and weights")
+    version: str | None = "1.0"
+    description: str | None = None
+    definition: dict[str, Any] = Field(
+        ..., description="Profile definition containing patterns and weights"
+    )  # noqa: E501
 
 
 class ProfileCreate(ProfileBase):
@@ -66,24 +69,24 @@ class ProfileOut(ProfileBase):
     id: int
     created_at: datetime
     updated_at: datetime
-    created_by_id: Optional[int]
+    created_by_id: int | None
 
 
 # Data Source schemas
 class DataSourceBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
-    description: Optional[str] = Field(None, max_length=255)
+    description: str | None = Field(None, max_length=255)
     source_type: DataSourceType
 
 
 class DataSourceCreate(DataSourceBase):
-    connection_config: Dict[str, Any] = Field(..., description="Connection configuration")
+    connection_config: dict[str, Any] = Field(..., description="Connection configuration")
 
 
 class DataSourceUpdate(BaseModel):
-    name: Optional[str] = Field(None, min_length=1, max_length=100)
-    description: Optional[str] = Field(None, max_length=255)
-    connection_config: Optional[Dict[str, Any]] = None
+    name: str | None = Field(None, min_length=1, max_length=100)
+    description: str | None = Field(None, max_length=255)
+    connection_config: dict[str, Any] | None = None
 
 
 class DataSourceOut(DataSourceBase):
@@ -92,8 +95,8 @@ class DataSourceOut(DataSourceBase):
     id: int
     user_id: int
     status: ConnectionStatus
-    last_tested_at: Optional[datetime]
-    test_error: Optional[str]
+    last_tested_at: datetime | None
+    test_error: str | None
     created_at: datetime
     updated_at: datetime
 
@@ -101,15 +104,15 @@ class DataSourceOut(DataSourceBase):
 class ConnectionTestResult(BaseModel):
     success: bool
     message: str
-    details: Optional[Dict[str, Any]] = None
+    details: dict[str, Any] | None = None
 
 
 class ScanJobCreate(BaseModel):
     profile_id: int
-    data_source_id: Optional[int] = None
-    file_name: Optional[str] = None
-    table_name: Optional[str] = Field(None, description="Database table name to scan")
-    query: Optional[str] = Field(None, description="Custom SQL query to scan")
+    data_source_id: int | None = None
+    file_name: str | None = None
+    table_name: str | None = Field(None, description="Database table name to scan")
+    query: str | None = Field(None, description="Custom SQL query to scan")
 
 
 class ScanJobOut(BaseModel):
@@ -117,15 +120,15 @@ class ScanJobOut(BaseModel):
 
     id: int
     profile_id: int
-    data_source_id: Optional[int]
-    file_name: Optional[str]
-    table_name: Optional[str]
-    query: Optional[str]
+    data_source_id: int | None
+    file_name: str | None
+    table_name: str | None
+    query: str | None
     status: ScanStatus
     progress: float
-    started_at: Optional[datetime]
-    finished_at: Optional[datetime]
-    error_message: Optional[str]
+    started_at: datetime | None
+    finished_at: datetime | None
+    error_message: str | None
 
 
 class FindingOut(BaseModel):
@@ -137,29 +140,29 @@ class FindingOut(BaseModel):
     rule_id: str
     severity: str
     confidence: float
-    evidence: Optional[str]
+    evidence: str | None
     is_false_positive: bool = False
-    finding_metadata: Optional[Dict[str, Any]] = None
+    finding_metadata: dict[str, Any] | None = None
 
 
 class ReidentificationRisk(BaseModel):
-    prosecutor_risk: Optional[float] = None
-    journalist_risk: Optional[float] = None
-    marketer_risk: Optional[float] = None
-    risk_level: Optional[str] = None
-    unique_records: Optional[int] = None
-    equivalence_classes: Optional[int] = None
+    prosecutor_risk: float | None = None
+    journalist_risk: float | None = None
+    marketer_risk: float | None = None
+    risk_level: str | None = None
+    unique_records: int | None = None
+    equivalence_classes: int | None = None
 
 
 class MetricOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    quasi_identifiers: Optional[List[str]]
-    k_anonymity: Optional[int]
-    l_diversity: Optional[int]
-    t_closeness: Optional[float]
-    reidentification_risk: Optional[Dict[str, Any]] = None
-    privacy_impact_assessment: Optional[Dict[str, Any]] = None
+    quasi_identifiers: list[str] | None
+    k_anonymity: int | None
+    l_diversity: int | None
+    t_closeness: float | None
+    reidentification_risk: dict[str, Any] | None = None
+    privacy_impact_assessment: dict[str, Any] | None = None
 
 
 class ReportOut(BaseModel):
@@ -167,7 +170,7 @@ class ReportOut(BaseModel):
 
     id: int
     html_path: str
-    pdf_path: Optional[str]
+    pdf_path: str | None
     created_at: datetime
 
 

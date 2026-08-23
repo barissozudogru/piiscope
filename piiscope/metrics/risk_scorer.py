@@ -9,24 +9,25 @@ Each finding is scored on a 1-10 scale that accounts for:
 Aggregate scores are computed per scan and stored so that trend analysis
 can track risk movement across successive scans of the same data source.
 """
+
 from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Sensitivity weights per rule_id (0.0 – 1.0, will be scaled to 1-10)
+# Sensitivity weights per rule_id (0.0 - 1.0, will be scaled to 1-10)
 # ---------------------------------------------------------------------------
 # Higher = more sensitive. Anchored on widely accepted severity hierarchies:
 #   SSN / national ID / medical = 0.9-1.0 (very high)
 #   Financial (credit card, IBAN) = 0.7-0.8 (high)
 #   Contact (phone, email) = 0.3-0.5 (medium-low)
 #   Network / metadata = 0.1-0.3 (low)
-_SENSITIVITY: Dict[str, float] = {
+_SENSITIVITY: dict[str, float] = {
     "us_ssn": 1.0,
     "tc_kimlik": 1.0,
     "medical_record": 1.0,
@@ -41,9 +42,11 @@ _SENSITIVITY: Dict[str, float] = {
     "tr_phone": 0.45,
     "email": 0.4,
     "given_name": 0.3,
+    "surname": 0.3,
+    "medical_condition": 0.9,
     "ner_person": 0.3,
-    "hospital_name": 0.4,
-    "drug_name": 0.5,
+    "hospital_name": 0.9,
+    "drug_name": 0.9,
     "date": 0.2,
     "ipv4_address": 0.25,
     "ipv6_address": 0.25,
@@ -68,13 +71,13 @@ _DEFAULT_SENSITIVITY = 0.4
 # treated as non-production artefacts.  API response exposure is the most
 # critical context because it implies the data is traversing a network
 # boundary.
-CONTEXT_MULTIPLIERS: Dict[str, float] = {
-    "database_field": 1.0,      # baseline
-    "api_response": 1.3,        # network-traversing, highest risk
-    "log_file": 0.7,            # may be internal/redacted
-    "report": 0.9,              # structured but may be shared
-    "config_file": 1.1,         # often overlooked, should not contain PII
-    "flat_file": 0.85,          # CSVs / Parquet shared for analytics
+CONTEXT_MULTIPLIERS: dict[str, float] = {
+    "database_field": 1.0,  # baseline
+    "api_response": 1.3,  # network-traversing, highest risk
+    "log_file": 0.7,  # may be internal/redacted
+    "report": 0.9,  # structured but may be shared
+    "config_file": 1.1,  # often overlooked, should not contain PII
+    "flat_file": 0.85,  # CSVs / Parquet shared for analytics
     "unknown": 1.0,
 }
 
@@ -83,15 +86,17 @@ CONTEXT_MULTIPLIERS: Dict[str, float] = {
 # ---------------------------------------------------------------------------
 # Data subject to strict regulations adds a regulatory weight to ensure
 # compliance-driven organisations surface those findings at the top.
-_JURISDICTION_BONUS: Dict[str, float] = {
+_JURISDICTION_BONUS: dict[str, float] = {
     "gdpr": 0.5,
     "ccpa": 0.4,
     "hipaa": 0.6,
-    "pdpl": 0.4,   # Turkish KVKK / PDPL
+    "kvkk": 0.4,
+    "pdpl": 0.4,  # Turkish KVKK / PDPL
+    "lgpd": 0.5,
 }
 
 # Volume brackets (number of affected records → weight 0.0-1.0)
-_VOLUME_BRACKETS: List[tuple[int, float]] = [
+_VOLUME_BRACKETS: list[tuple[int, float]] = [
     (1, 0.05),
     (10, 0.15),
     (100, 0.35),
@@ -113,28 +118,30 @@ def _volume_weight(record_count: int) -> float:
 @dataclass
 class FindingScore:
     """Score breakdown for a single finding."""
+
     rule_id: str
     raw_sensitivity: float
     context_multiplier: float
     volume_weight: float
     jurisdiction_bonus: float
-    final_score: float          # 1-10
-    confidence: float           # from the detection engine
+    final_score: float  # 1-10
+    confidence: float  # from the detection engine
 
 
 @dataclass
 class ScanRiskSummary:
     """Aggregate risk summary for an entire scan."""
+
     scan_id: int
     total_findings: int
-    scored_findings: List[FindingScore]
-    aggregate_score: float          # 1-10; weighted average
-    max_score: float                # highest individual score
-    critical_count: int             # findings with score >= 8
-    high_count: int                 # findings with score >= 6
-    medium_count: int               # findings with score >= 3
-    low_count: int                  # findings with score < 3
-    top_rule_ids: List[str]         # top-5 most risky rule IDs
+    scored_findings: list[FindingScore]
+    aggregate_score: float  # 1-10; weighted average
+    max_score: float  # highest individual score
+    critical_count: int  # findings with score >= 8
+    high_count: int  # findings with score >= 6
+    medium_count: int  # findings with score >= 3
+    low_count: int  # findings with score < 3
+    top_rule_ids: list[str]  # top-5 most risky rule IDs
     computed_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
@@ -155,14 +162,12 @@ class RiskScorer:
         self,
         *,
         context: str = "unknown",
-        jurisdictions: Optional[List[str]] = None,
+        jurisdictions: list[str] | None = None,
     ) -> None:
         self.context = context if context in CONTEXT_MULTIPLIERS else "unknown"
         self.context_mult = CONTEXT_MULTIPLIERS[self.context]
         self.jurisdictions = [j.lower() for j in (jurisdictions or [])]
-        self.jurisdiction_bonus = sum(
-            _JURISDICTION_BONUS.get(j, 0.0) for j in self.jurisdictions
-        )
+        self.jurisdiction_bonus = sum(_JURISDICTION_BONUS.get(j, 0.0) for j in self.jurisdictions)
 
     # ------------------------------------------------------------------
     # Single finding
@@ -208,7 +213,7 @@ class RiskScorer:
     def score_scan(
         self,
         scan_id: int,
-        findings: List[Dict[str, Any]],
+        findings: list[dict[str, Any]],
     ) -> ScanRiskSummary:
         """Score all findings for a scan and return a risk summary.
 
@@ -234,8 +239,8 @@ class RiskScorer:
                 top_rule_ids=[],
             )
 
-        scored: List[FindingScore] = []
-        rule_score_totals: Dict[str, float] = {}
+        scored: list[FindingScore] = []
+        rule_score_totals: dict[str, float] = {}
 
         for f in findings:
             rule_id = f.get("rule_id", "unknown")
@@ -255,12 +260,19 @@ class RiskScorer:
         low = sum(1 for s in scores if s < 3.0)
 
         # Top-5 rule IDs by cumulative score
-        top_rules = sorted(rule_score_totals, key=rule_score_totals.get, reverse=True)[:5]
+        top_rules = sorted(rule_score_totals, key=lambda x: rule_score_totals[x], reverse=True)[:5]
 
         logger.info(
             "Scored scan %d: %d findings, aggregate=%.2f, max=%.2f, "
             "critical=%d, high=%d, medium=%d, low=%d",
-            scan_id, len(findings), aggregate, max_score, critical, high, medium, low,
+            scan_id,
+            len(findings),
+            aggregate,
+            max_score,
+            critical,
+            high,
+            medium,
+            low,
         )
 
         return ScanRiskSummary(
@@ -282,9 +294,9 @@ class RiskScorer:
 
     @staticmethod
     def compute_trend(
-        previous_scores: List[float],
+        previous_scores: list[float],
         current_score: float,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Compare current aggregate score against historical scores.
 
         Returns a dict with::

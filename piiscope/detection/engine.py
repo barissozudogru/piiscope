@@ -22,14 +22,15 @@ Key improvements over the original:
     register_plugin(); each plugin receives the text+column and may
     return additional findings.
 """
+
 from __future__ import annotations
 
 import json
 import logging
-import os
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple
+from typing import Any
 
 import pandas as pd
 
@@ -45,37 +46,70 @@ except ImportError:
     spacy = None
     Language = None  # type: ignore
 
+from .dictionaries import (
+    get_drug_names,
+    get_given_names,
+    get_hospital_keywords,
+    get_medical_terms,
+    get_surnames,
+    load_user_dictionary,
+)
 from .regex_patterns import PATTERNS, PatternDefinition, build_custom_patterns
-from .dictionaries import GIVEN_NAMES, HOSPITAL_NAMES, DRUG_NAMES
 from .validators import (
-    luhn_check,
+    column_name_context_boost,
     iban_check,
-    tc_kimlik_check,
+    is_private_ip,
     is_valid_ipv4,
     is_valid_ipv6,
-    is_private_ip,
-    column_name_context_boost,
+    luhn_check,
+    tc_kimlik_check,
 )
-
 
 logger = logging.getLogger(__name__)
 
 # Minimum confidence threshold below which findings are not emitted
+# Column-name tokens that identify a column as holding only given names or only
+# surnames. Matched on whole tokens (split on non-alphanumerics) so that "ad"
+# (Turkish for given name) does not match "address".
+_GIVEN_NAME_COLUMN_TOKENS = frozenset(
+    {
+        "first", "firstname", "given", "givenname", "forename", "forenames",
+        "vorname", "prenom", "voornaam", "imie", "ad", "adi", "nombre", "primeiro",
+    }
+)
+_NON_PERSON_COLUMN_TOKENS = frozenset(
+    {
+        "city", "town", "street", "address", "addr", "country", "state", "province",
+        "region", "county", "zip", "postal", "postcode", "company", "organisation",
+        "organization", "org", "employer", "vendor", "supplier", "product", "item",
+        "sku", "brand", "category", "department", "dept", "url", "domain", "host",
+        "path", "file", "filename", "hospital", "clinic", "school", "university",
+    }
+)
+_SURNAME_COLUMN_TOKENS = frozenset(
+    {
+        "last", "lastname", "surname", "surnames", "family", "familyname",
+        "nachname", "familienname", "soyad", "soyadi", "apellido", "apellidos",
+        "sobrenome", "cognome", "achternaam", "nazwisko",
+    }
+)
+
+
 _MIN_CONFIDENCE = 0.2
 
 # Rules that require checksum validation before emitting
-_CHECKSUM_VALIDATORS: Dict[str, Callable[[str], bool]] = {
+_CHECKSUM_VALIDATORS: dict[str, Callable[[str], bool]] = {
     "credit_card": luhn_check,
     "iban": iban_check,
-    "iban_tr": iban_check,   # Turkish IBAN uses the same MOD-97 check
+    "iban_tr": iban_check,  # Turkish IBAN uses the same MOD-97 check
     "tc_kimlik": tc_kimlik_check,
 }
 
 # Plugin registry: external modules can call register_plugin() to extend detection
-_PLUGINS: List[Callable[[str, str], List["Finding"]]] = []
+_PLUGINS: list[Callable[[str, str], list[Finding]]] = []
 
 
-def register_plugin(fn: Callable[[str, str], List["Finding"]]) -> None:
+def register_plugin(fn: Callable[[str, str], list[Finding]]) -> None:
     """Register a detection plugin function.
 
     The plugin receives (text: str, column_name: str) and should return
@@ -93,13 +127,13 @@ class Finding:
     confidence: float
     evidence: str
     # Extra metadata (e.g. ip_classification, is_private_ip)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
     # Whether the finding was marked as a false positive
     is_false_positive: bool = False
 
 
 class DetectionEngine:
-    def __init__(self, profile: Dict[str, Any]):
+    def __init__(self, profile: dict[str, Any]):
         """Initialise the detection engine from a profile definition.
 
         profile keys:
@@ -115,9 +149,7 @@ class DetectionEngine:
         self.profile = profile or {}
 
         # Start from built-in patterns
-        self.patterns: Dict[str, PatternDefinition] = {
-            k: v for k, v in PATTERNS.items()
-        }
+        self.patterns: dict[str, PatternDefinition] = {k: v for k, v in PATTERNS.items()}
 
         # Apply severity overrides from the profile
         for rule_id, spec in self.profile.get("patterns", {}).items():
@@ -131,11 +163,110 @@ class DetectionEngine:
             # Custom patterns override built-ins with the same ID
             self.patterns.update(custom)
 
-        # Dictionary settings
         dict_cfg = self.profile.get("dictionaries", {})
         self.use_name_dict = dict_cfg.get("names", {}).get("enabled", True)
         self.use_hospital_dict = dict_cfg.get("hospitals", {}).get("enabled", True)
         self.use_drug_dict = dict_cfg.get("drugs", {}).get("enabled", True)
+        self.use_medical_dict = dict_cfg.get("medical", {}).get("enabled", True)
+
+        self.given_names = get_given_names().copy() if self.use_name_dict else set()
+        self.surnames = get_surnames().copy() if self.use_name_dict else set()
+        self.hospital_keywords = get_hospital_keywords().copy() if self.use_hospital_dict else set()
+        self.drug_names = get_drug_names().copy() if self.use_drug_dict else set()
+        self.medical_terms = get_medical_terms().copy() if self.use_medical_dict else set()
+
+        user_dicts = self.profile.get("user_dictionaries", {})
+        if "given_name" in user_dicts:
+            self.given_names.update(load_user_dictionary(user_dicts["given_name"]))
+        if "surname" in user_dicts:
+            self.surnames.update(load_user_dictionary(user_dicts["surname"]))
+        if "hospital_keyword" in user_dicts:
+            self.hospital_keywords.update(load_user_dictionary(user_dicts["hospital_keyword"]))
+        if "drug_name" in user_dicts:
+            self.drug_names.update(load_user_dictionary(user_dicts["drug_name"]))
+        if "medical_condition" in user_dicts:
+            self.medical_terms.update(load_user_dictionary(user_dicts["medical_condition"]))
+
+        self.stoplist_names = {
+            "will",
+            "bill",
+            "mark",
+            "may",
+            "april",
+            "june",
+            "summer",
+            "grace",
+            "hope",
+            "art",
+            "rose",
+            "joy",
+            "sunny",
+            "paris",
+            "jordan",
+            "georgia",
+            "virginia",
+            "chance",
+            "guy",
+            "earl",
+            "miles",
+            "ray",
+            "dean",
+            "lane",
+            "page",
+            "gene",
+            "major",
+            "king",
+            "prince",
+            "christian",
+            "ivy",
+            "olive",
+            "amber",
+            "pearl",
+            "rusty",
+            "ginger",
+            "faith",
+            "destiny",
+            "autumn",
+            "crystal",
+            "angel",
+            "precious",
+            "lucky",
+            "harmony",
+            "melody",
+            "dawn",
+            "eve",
+            "sky",
+            "river",
+            "brook",
+            "forest",
+            "stone",
+            "rock",
+            "cliff",
+            "clay",
+            "cole",
+            "dale",
+            "glen",
+            "heath",
+            "hunter",
+            "mason",
+            "taylor",
+            "tyler",
+            "carter",
+            "cooper",
+            "parker",
+            "tanner",
+            "walker",
+            "ryder",
+            "chase",
+            "reed",
+            "wade",
+            "grant",
+            "lance",
+            "blaze",
+            "rain",
+            "storm",
+            "winter",
+        }
 
         # Suppression rules for false positive management
         # Format: [{rule_id: str, column_name: str (optional),
@@ -144,16 +275,18 @@ class DetectionEngine:
         self._suppression_compiled = []
         for rule in self._suppression_rules:
             vp = rule.get("value_pattern")
-            self._suppression_compiled.append({
-                "rule_id": rule.get("rule_id"),
-                "column_name": rule.get("column_name"),
-                "value_re": re.compile(vp, re.IGNORECASE) if vp else None,
-            })
+            self._suppression_compiled.append(
+                {
+                    "rule_id": rule.get("rule_id"),
+                    "column_name": rule.get("column_name"),
+                    "value_re": re.compile(vp, re.IGNORECASE) if vp else None,
+                }
+            )
 
         # NLP model
         model_cfg = self.profile.get("model", {})
         self.use_spacy = bool(model_cfg.get("use_spacy", False)) and spacy is not None
-        self.nlp: Optional[Language] = None
+        self.nlp: Language | None = None
         if self.use_spacy:
             try:
                 self.nlp = spacy.load(model_cfg.get("model_name", "en_core_web_sm"))
@@ -181,7 +314,7 @@ class DetectionEngine:
     # Cell-level detection
     # ------------------------------------------------------------------
 
-    def detect_cell(self, value: str, column_name: str) -> List[Finding]:
+    def detect_cell(self, value: str, column_name: str) -> list[Finding]:
         """Detect sensitive information in a single cell.
 
         Returns a list of findings. Each finding carries:
@@ -190,7 +323,7 @@ class DetectionEngine:
           - context-adjusted confidence based on the column name
           - checksum-validated accuracy for credit cards, IBANs, TC Kimlik
         """
-        findings: List[Finding] = []
+        findings: list[Finding] = []
         text = str(value).strip()
         if not text:
             return findings
@@ -215,7 +348,7 @@ class DetectionEngine:
                     base_confidence = 0.95
 
                 # IPv4: validate octet ranges and classify public/private
-                extra_meta: Dict[str, Any] = {}
+                extra_meta: dict[str, Any] = {}
                 if rule_id == "ipv4_address":
                     if not is_valid_ipv4(matched_text):
                         continue
@@ -249,64 +382,183 @@ class DetectionEngine:
                 )
                 if not self._is_suppressed(f):
                     findings.append(f)
-                    # One finding per rule per cell is usually sufficient
                     break
-
-        lower = text.lower()
 
         # ------------------------------------------------------------------
         # 2. Dictionary look-ups
         # ------------------------------------------------------------------
-        if self.use_name_dict:
-            tokens = lower.split()
-            for token in tokens:
-                if token in GIVEN_NAMES:
-                    ctx_mult = column_name_context_boost(column_name, "given_name")
-                    confidence = round(min(1.0, 0.6 * ctx_mult), 3)
-                    if confidence >= _MIN_CONFIDENCE:
-                        f = Finding(
-                            record_index=placeholder,
-                            column_name=column_name,
-                            rule_id="given_name",
-                            severity=0.3,
-                            confidence=confidence,
-                            evidence=token,
-                        )
-                        if not self._is_suppressed(f):
-                            findings.append(f)
-                    break
+
+        # Extract tokens with their original case for capitalization checks
+        orig_tokens = [m.group() for m in re.finditer(r"\b\w+\b", text) if len(m.group()) >= 3]
+
+        # We also need lower tokens for simple matching of drugs/hospitals
+        tokens = [t.lower() for t in orig_tokens]
+        bigrams = (
+            [f"{tokens[i]} {tokens[i + 1]}" for i in range(len(tokens) - 1)]
+            if len(tokens) > 1
+            else []
+        )
+
+        col_tokens_all = set(re.split(r"[^a-z0-9]+", column_name.lower()))
+        non_person_col = bool(col_tokens_all & _NON_PERSON_COLUMN_TOKENS) and not (
+            col_tokens_all & (_GIVEN_NAME_COLUMN_TOKENS | _SURNAME_COLUMN_TOKENS | {"name"})
+        )
+        if self.use_name_dict and not non_person_col:
+            given_name_ctx = column_name_context_boost(column_name, "given_name")
+            surname_ctx = column_name_context_boost(column_name, "surname")
+            col_tokens = set(re.split(r"[^a-z0-9]+", column_name.lower()))
+            given_only_col = bool(col_tokens & _GIVEN_NAME_COLUMN_TOKENS) and not (
+                col_tokens & _SURNAME_COLUMN_TOKENS
+            )
+            surname_only_col = bool(col_tokens & _SURNAME_COLUMN_TOKENS) and not (
+                col_tokens & _GIVEN_NAME_COLUMN_TOKENS
+            )
+            is_name_col = (
+                given_name_ctx > 1.0 or surname_ctx > 1.0 or given_only_col or surname_only_col
+            )
+
+            for i, token in enumerate(orig_tokens):
+                lower_token = tokens[i]
+                is_capitalised = token.istitle() or token.isupper()
+                # A token that is both a given name and a surname, directly after a
+                # given name in free text ("Ayse Yilmaz"), is read as the surname.
+                follows_given_name = (
+                    i > 0
+                    and not is_name_col
+                    and tokens[i - 1] in self.given_names
+                    and lower_token in self.surnames
+                )
+
+                # Given name logic (skipped in columns that are explicitly surnames)
+                if (
+                    lower_token in self.given_names
+                    and not surname_only_col
+                    and not follows_given_name
+                ):
+                    # In name columns, match case-insensitively.
+                    # In other columns, token must be capitalised and not in stoplist.
+                    if is_name_col or (is_capitalised and lower_token not in self.stoplist_names):
+                        ctx = given_name_ctx if is_name_col else max(1.0, given_name_ctx)
+                        confidence = round(min(1.0, 0.6 * ctx), 3)
+                        if confidence >= _MIN_CONFIDENCE:
+                            f = Finding(
+                                record_index=placeholder,
+                                column_name=column_name,
+                                rule_id="given_name",
+                                severity=0.3,
+                                confidence=confidence,
+                                evidence=lower_token,
+                            )
+                            if not self._is_suppressed(f):
+                                findings.append(f)
+
+                # Surname logic (skipped in columns that are explicitly given names)
+                if lower_token in self.surnames and not given_only_col:
+                    fire_surname = False
+                    if is_name_col:
+                        fire_surname = True
+                    elif is_capitalised:
+                        # check if part of consecutive capitalised tokens, first being a given name
+                        if i > 0:
+                            prev = orig_tokens[i - 1]
+                            if (
+                                prev.istitle() or prev.isupper()
+                            ) and prev.lower() in self.given_names:
+                                fire_surname = True
+
+                    if fire_surname:
+                        ctx = surname_ctx if is_name_col else max(1.0, surname_ctx)
+                        confidence = round(min(1.0, 0.6 * ctx), 3)
+                        if confidence >= _MIN_CONFIDENCE:
+                            f = Finding(
+                                record_index=placeholder,
+                                column_name=column_name,
+                                rule_id="surname",
+                                severity=0.3,
+                                confidence=confidence,
+                                evidence=lower_token,
+                            )
+                            if not self._is_suppressed(f):
+                                findings.append(f)
 
         if self.use_hospital_dict:
-            for h in HOSPITAL_NAMES:
-                if h in lower:
+            for t in tokens:
+                if t in self.hospital_keywords:
                     f = Finding(
                         record_index=placeholder,
                         column_name=column_name,
                         rule_id="hospital_name",
-                        severity=0.4,
+                        severity=0.9,
                         confidence=0.7,
-                        evidence=h,
+                        evidence=t,
                     )
                     if not self._is_suppressed(f):
                         findings.append(f)
-                    break
+            for b in bigrams:
+                if b in self.hospital_keywords:
+                    f = Finding(
+                        record_index=placeholder,
+                        column_name=column_name,
+                        rule_id="hospital_name",
+                        severity=0.9,
+                        confidence=0.7,
+                        evidence=b,
+                    )
+                    if not self._is_suppressed(f):
+                        findings.append(f)
 
         if self.use_drug_dict:
-            for d in DRUG_NAMES:
-                if d in lower:
+            for t in tokens:
+                if t in self.drug_names:
                     f = Finding(
                         record_index=placeholder,
                         column_name=column_name,
                         rule_id="drug_name",
-                        severity=0.5,
+                        severity=0.9,
                         confidence=0.7,
-                        evidence=d,
+                        evidence=t,
                     )
                     if not self._is_suppressed(f):
                         findings.append(f)
-                    break
+            for b in bigrams:
+                if b in self.drug_names:
+                    f = Finding(
+                        record_index=placeholder,
+                        column_name=column_name,
+                        rule_id="drug_name",
+                        severity=0.9,
+                        confidence=0.7,
+                        evidence=b,
+                    )
+                    if not self._is_suppressed(f):
+                        findings.append(f)
 
-        # ------------------------------------------------------------------
+        if getattr(self, "use_medical_dict", False):
+            for t in tokens:
+                if t in self.medical_terms:
+                    f = Finding(
+                        record_index=placeholder,
+                        column_name=column_name,
+                        rule_id="medical_condition",
+                        severity=0.9,
+                        confidence=0.7,
+                        evidence=t,
+                    )
+                    if not self._is_suppressed(f):
+                        findings.append(f)
+            for b in bigrams:
+                if b in self.medical_terms:
+                    f = Finding(
+                        record_index=placeholder,
+                        column_name=column_name,
+                        rule_id="medical_condition",
+                        severity=0.9,
+                        confidence=0.7,
+                        evidence=b,
+                    )
+                    if not self._is_suppressed(f):
+                        findings.append(f)
+
         # 3. spaCy NER (optional)
         # ------------------------------------------------------------------
         if self.use_spacy and self.nlp:
@@ -343,15 +595,15 @@ class DetectionEngine:
             except Exception as exc:
                 logger.warning("Plugin %s raised an error: %s", plugin_fn.__name__, exc)
 
-        return findings
+        return _collapse_name_findings(findings)
 
     # ------------------------------------------------------------------
     # Row-level detection
     # ------------------------------------------------------------------
 
-    def scan_row(self, row: Dict[str, Any], record_index: int) -> List[Finding]:
+    def scan_row(self, row: dict[str, Any], record_index: int) -> list[Finding]:
         """Scan a dictionary representing one row and return all findings."""
-        all_findings: List[Finding] = []
+        all_findings: list[Finding] = []
         for col_name, value in row.items():
             cell_findings = self.detect_cell(value, col_name)
             for f in cell_findings:
@@ -366,7 +618,7 @@ class DetectionEngine:
     def scan_csv(
         self,
         file_path: str,
-        callback: Callable[[int, List[Finding]], None],
+        callback: Callable[[int, list[Finding]], None],
         *,
         chunksize: int = 1000,
     ) -> None:
@@ -376,15 +628,13 @@ class DetectionEngine:
         start_time = time.time()
         processed_rows = 0
         try:
-            reader = pd.read_csv(
-                file_path, chunksize=chunksize, dtype=str, keep_default_na=False
-            )
+            reader = pd.read_csv(file_path, chunksize=chunksize, dtype=str, keep_default_na=False)
             record_index = 0
             for chunk in reader:
                 chunk_start = time.time()
                 chunk_findings = 0
-                for _, row in chunk.iterrows():
-                    row_dict = row.to_dict()
+                records = chunk.to_dict("records")
+                for row_dict in records:
                     findings = self.scan_row(row_dict, record_index)
                     if findings:
                         callback(record_index, findings)
@@ -410,11 +660,11 @@ class DetectionEngine:
     def scan_json(
         self,
         file_path: str,
-        callback: Callable[[int, List[Finding]], None],
+        callback: Callable[[int, list[Finding]], None],
     ) -> None:
         """Scan a newline-delimited JSON file (NDJSON)."""
         record_index = 0
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             for line in f:
                 if not line.strip():
                     continue
@@ -431,7 +681,7 @@ class DetectionEngine:
     def scan_parquet(
         self,
         file_path: str,
-        callback: Callable[[int, List[Finding]], None],
+        callback: Callable[[int, list[Finding]], None],
         *,
         batch_size: int = 1000,
     ) -> None:
@@ -442,8 +692,8 @@ class DetectionEngine:
         record_index = 0
         for batch in parquet_file.iter_batches(batch_size=batch_size):
             df = batch.to_pandas().astype(str)
-            for _, row in df.iterrows():
-                row_dict = row.to_dict()
+            records = df.to_dict("records")
+            for row_dict in records:
                 findings = self.scan_row(row_dict, record_index)
                 if findings:
                     callback(record_index, findings)
@@ -453,7 +703,7 @@ class DetectionEngine:
         self,
         file_path: str,
         file_format: str,
-        callback: Callable[[int, List[Finding]], None],
+        callback: Callable[[int, list[Finding]], None],
     ) -> None:
         """Dispatch scanning based on file format."""
         fmt = file_format.lower()
@@ -465,3 +715,22 @@ class DetectionEngine:
             self.scan_parquet(file_path, callback)
         else:
             raise ValueError(f"Unsupported file format: {file_format}")
+
+
+def _collapse_name_findings(findings: list[Finding]) -> list[Finding]:
+    """Keep one given_name and one surname finding per cell.
+
+    Name detectors fire per token; a cell such as "Maria Silva Santos" would
+    otherwise count as two surname hits, which inflates per-column hit counts
+    beyond the number of rows. The highest-confidence finding is kept.
+    """
+    best: dict[str, Finding] = {}
+    others: list[Finding] = []
+    for finding in findings:
+        if finding.rule_id in ("given_name", "surname"):
+            current = best.get(finding.rule_id)
+            if current is None or finding.confidence > current.confidence:
+                best[finding.rule_id] = finding
+        else:
+            others.append(finding)
+    return others + list(best.values())

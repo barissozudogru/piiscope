@@ -1,0 +1,103 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "piiscope"
+dynamic = ["version"]
+description = "Find, score and remediate personal data in your files and databases."
+readme = "README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.10"
+authors = [{ name = "Baris Sozudogru" }]
+keywords = [
+    "pii",
+    "gdpr",
+    "privacy",
+    "k-anonymity",
+    "data-protection",
+    "ccpa",
+    "kvkk",
+    "lgpd",
+    "dpia",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Security",
+    "Topic :: Database",
+    "Typing :: Typed",
+]
+dependencies = [
+    "pandas>=2.0",
+    "numpy>=1.24",
+    "python-dateutil>=2.8",
+    "typer>=0.12",
+    "rich>=13.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/barissozudogru/piiscope"
+Repository = "https://github.com/barissozudogru/piiscope"
+Issues = "https://github.com/barissozudogru/piiscope/issues"
+
+[project.scripts]
+piiscope = "piiscope.cli:main"
+
+[project.optional-dependencies]
+parquet = ["pyarrow>=17"]
+nlp = ["spacy>=3.7"]
+server = [
+    "fastapi>=0.118",
+    "uvicorn[standard]>=0.29",
+    "sqlalchemy>=2.0",
+    "celery>=5.3",
+    "redis>=5.0",
+    "psycopg2-binary>=2.9",
+    "pydantic>=2.6",
+    "pydantic-settings>=2.2",
+    "email-validator>=2.0",
+    "bcrypt>=4.0",
+    "python-jose[cryptography]>=3.4",
+    "python-multipart>=0.0.31",
+    "jinja2>=3.1.6",
+    "cryptography>=44",
+    "weasyprint>=62",
+    "spacy>=3.7",
+]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.5",
+    "pyarrow>=17",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["piiscope"]
+
+[tool.hatch.build.targets.sdist]
+include = ["/piiscope", "/tests", "/samples"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+# B008: typer's API is built on function calls in parameter defaults
+ignore = ["B008"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.hatch.version]
+path = "piiscope/__init__.py"

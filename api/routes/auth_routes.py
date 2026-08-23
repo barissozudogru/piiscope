@@ -4,23 +4,24 @@ These endpoints handle login and CRUD operations on user accounts.  A
 token‑based (JWT) authentication scheme is used.  Only Super Admins
 may create or delete users.
 """
-from __future__ import annotations
 
-from typing import List
+from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from .. import auth, models, schemas, utils
-from ..database import get_db
 from ..audit import log_audit_event
+from ..database import get_db
 
 router = APIRouter()
 
 
 @router.post("/login", response_model=schemas.Token)
-async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)) -> schemas.Token:
+async def login(
+    form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
+) -> schemas.Token:  # noqa: E501
     """Authenticate a user and return a JWT access token.
 
     The client should supply ``username`` and ``password`` as form fields.
@@ -30,12 +31,16 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
     # Log login event (username may not yet be in DB if login fails)
     user = db.query(models.User).filter(models.User.username == form_data.username).first()
     if user:
-        log_audit_event(db, user.id, action="login", target=None, details={"username": form_data.username})
+        log_audit_event(
+            db, user.id, action="login", target=None, details={"username": form_data.username}
+        )  # noqa: E501
     return token
 
 
 @router.get("/me", response_model=schemas.UserOut)
-async def read_current_user(current_user: models.User = Depends(auth.get_current_user)) -> schemas.UserOut:
+async def read_current_user(
+    current_user: models.User = Depends(auth.get_current_user),
+) -> schemas.UserOut:  # noqa: E501
     """Retrieve the profile of the currently authenticated user."""
     return schemas.UserOut.model_validate(current_user)
 
@@ -61,15 +66,21 @@ async def create_user(
     db.commit()
     db.refresh(user)
     # Audit log
-    log_audit_event(db, _.id if _ else None, action="create_user", target=f"user:{user.id}", details={"created_username": user.username})
+    log_audit_event(
+        db,
+        _.id if _ else None,
+        action="create_user",
+        target=f"user:{user.id}",
+        details={"created_username": user.username},
+    )  # noqa: E501
     return schemas.UserOut.model_validate(user)
 
 
-@router.get("/users", response_model=List[schemas.UserOut])
+@router.get("/users", response_model=list[schemas.UserOut])
 async def list_users(
     db: Session = Depends(get_db),
     _: models.User = Depends(auth.role_required(models.RoleEnum.SUPER_ADMIN)),
-) -> List[schemas.UserOut]:
+) -> list[schemas.UserOut]:
     """List all user accounts (Super Admin only)."""
     users = db.query(models.User).all()
     return [schemas.UserOut.model_validate(u) for u in users]

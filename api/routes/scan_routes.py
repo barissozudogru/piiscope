@@ -6,29 +6,29 @@ sanitised version of the original data.  File uploads are stored on
 disk; scanning is performed asynchronously via Celery.  All routes
 require authentication; permissions depend on the user's role.
 """
+
 from __future__ import annotations
 
 import os
 import re
-import shutil
-from typing import List, Optional
 
-from fastapi import APIRouter, Depends, File, UploadFile, HTTPException, status, Query
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
+from piiscope.detection.classifier import DataClassifier
+from piiscope.metrics.risk_scorer import RiskScorer
+from piiscope.remediation import masking
+
 from .. import auth, models, schemas
-from ..database import get_db
+from ..audit import log_audit_event
 from ..config import settings
-from ..tasks import scan_file_task
-from ..detection import masking
-from ..detection.risk_scorer import RiskScorer
-from ..detection.classifier import DataClassifier
+from ..database import get_db
+from ..exceptions import ValidationError
 from ..services.compliance_report import ComplianceReportGenerator
 from ..services.remediation import RemediationService
-from ..audit import log_audit_event
+from ..tasks import scan_file_task
 from ..validators import validate_file_extension
-from ..exceptions import ValidationError
 
 router = APIRouter()
 
@@ -41,11 +41,11 @@ os.makedirs(EXPORT_DIR, exist_ok=True)
 os.makedirs(REPORT_DIR, exist_ok=True)
 
 
-@router.get("/jobs", response_model=List[schemas.ScanJobOut])
+@router.get("/jobs", response_model=list[schemas.ScanJobOut])
 async def list_jobs(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user),
-) -> List[schemas.ScanJobOut]:
+) -> list[schemas.ScanJobOut]:
     """List scan jobs for the current user (or all jobs if admin/superadmin)."""
     if current_user.role in (models.RoleEnum.ADMIN, models.RoleEnum.SUPER_ADMIN):
         jobs = db.query(models.ScanJob).order_by(models.ScanJob.created_at.desc()).all()
@@ -64,7 +64,9 @@ async def upload_dataset(
     profile_id: int = Query(..., description="ID of the sensitivity profile to use"),
     file: UploadFile = File(..., description="Dataset file (CSV, JSON or Parquet)"),
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(auth.role_required(models.RoleEnum.USER, models.RoleEnum.ADMIN, models.RoleEnum.SUPER_ADMIN)),
+    current_user: models.User = Depends(
+        auth.role_required(models.RoleEnum.USER, models.RoleEnum.ADMIN, models.RoleEnum.SUPER_ADMIN)
+    ),  # noqa: E501
 ) -> schemas.ScanJobOut:
     """Upload a dataset and create a scan job.
 
@@ -81,36 +83,27 @@ async def upload_dataset(
     try:
         validate_file_extension(file.filename or "")
     except ValidationError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     # Stream upload while enforcing the configured size limit
     max_bytes = settings.max_file_size_mb * 1024 * 1024
     suffix = os.path.splitext(file.filename)[1]
     unique_name = f"{current_user.id}_{profile_id}_{os.urandom(8).hex()}{suffix}"
     file_path = os.path.join(UPLOAD_DIR, unique_name)
-    received = 0
+
+    from ..utils import stream_upload_to_disk
+
     try:
-        with open(file_path, "wb") as out_file:
-            chunk_size = 1024 * 1024  # 1 MB chunks
-            while True:
-                chunk = await file.read(chunk_size)
-                if not chunk:
-                    break
-                received += len(chunk)
-                if received > max_bytes:
-                    out_file.close()
-                    os.remove(file_path)
-                    raise HTTPException(
-                        status_code=413,
-                        detail=f"File exceeds maximum allowed size of {settings.max_file_size_mb} MB",
-                    )
-                out_file.write(chunk)
-    except HTTPException:
-        raise
+        await stream_upload_to_disk(file, file_path, max_bytes)
+    except ValidationError as exc:
+        raise HTTPException(
+            status_code=413,
+            detail=f"File exceeds maximum allowed size of {settings.max_file_size_mb} MB",
+        ) from exc
     except Exception as exc:
         if os.path.exists(file_path):
             os.remove(file_path)
-        raise HTTPException(status_code=500, detail=f"Failed to save uploaded file: {exc}")
+        raise HTTPException(status_code=500, detail=f"Failed to save uploaded file: {exc}") from exc
     # Create scan job record
     job = models.ScanJob(
         user_id=current_user.id,
@@ -126,7 +119,13 @@ async def upload_dataset(
     # Trigger Celery task asynchronously
     scan_file_task.delay(job.id)
     # Audit log
-    log_audit_event(db, current_user.id, action="scan_started", target=f"job:{job.id}", details={"file_name": file.filename, "profile_id": profile_id})
+    log_audit_event(
+        db,
+        current_user.id,
+        action="scan_started",
+        target=f"job:{job.id}",
+        details={"file_name": file.filename, "profile_id": profile_id},
+    )  # noqa: E501
     return schemas.ScanJobOut.model_validate(job)
 
 
@@ -147,14 +146,14 @@ async def get_job(
     return schemas.ScanJobOut.model_validate(job)
 
 
-@router.get("/jobs/{job_id}/findings", response_model=List[schemas.FindingOut])
+@router.get("/jobs/{job_id}/findings", response_model=list[schemas.FindingOut])
 async def list_findings(
     job_id: int,
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=100, ge=1, le=1000),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user),
-) -> List[schemas.FindingOut]:
+) -> list[schemas.FindingOut]:
     """List findings for a specific job.  Supports pagination via skip/limit."""
     job = db.query(models.ScanJob).get(job_id)
     if not job:
@@ -213,6 +212,7 @@ async def export_sanitised(
     file_ext = os.path.splitext(job.file_path)[1].lower()
     # Load the file into DataFrame
     import pandas as pd  # type: ignore
+
     if file_ext == ".csv":
         df = pd.read_csv(job.file_path, dtype=str, keep_default_na=False)
     elif file_ext == ".json":
@@ -227,7 +227,9 @@ async def export_sanitised(
         elif m.mask_type == "hash":
             df[m.column_name] = df[m.column_name].apply(lambda x: masking.hash_value(x))
         elif m.mask_type == "redact":
-            df[m.column_name] = df[m.column_name].apply(lambda x: masking.partial_redact(x) if isinstance(x, str) else x)
+            df[m.column_name] = df[m.column_name].apply(
+                lambda x: masking.partial_redact(x) if isinstance(x, str) else x
+            )  # noqa: E501
         # Additional mask types can be added here
     # Write sanitised file
     out_name = f"job_{job_id}_sanitised.csv"
@@ -238,12 +240,20 @@ async def export_sanitised(
     db.add(report)
     db.commit()
     # Audit log
-    log_audit_event(db, current_user.id, action="export_sanitised", target=f"job:{job.id}", details={"output_path": out_path})
+    log_audit_event(
+        db,
+        current_user.id,
+        action="export_sanitised",
+        target=f"job:{job.id}",
+        details={"output_path": out_path},
+    )  # noqa: E501
     # Return a link to download
     return {"download_url": f"/scan/download/{out_name}"}
 
 
-@router.patch("/jobs/{job_id}/findings/{finding_id}/false-positive", response_model=schemas.FindingOut)
+@router.patch(
+    "/jobs/{job_id}/findings/{finding_id}/false-positive", response_model=schemas.FindingOut
+)  # noqa: E501
 async def mark_finding_false_positive(
     job_id: int,
     finding_id: int,
@@ -365,14 +375,8 @@ async def get_compliance_report(
     }
 
     # Compute per-finding risk scores for remediation prioritisation
-    finding_scores = {
-        fs.rule_id: fs.final_score
-        for fs in risk_summary.scored_findings
-    }
-    risk_scores_by_id = {
-        f["id"]: finding_scores.get(f["rule_id"], 5.0)
-        for f in findings
-    }
+    finding_scores = {fs.rule_id: fs.final_score for fs in risk_summary.scored_findings}
+    risk_scores_by_id = {f["id"]: finding_scores.get(f["rule_id"], 5.0) for f in findings}
 
     # Generate remediation suggestions
     remediation_svc = RemediationService()
@@ -402,6 +406,7 @@ async def get_compliance_report(
 
     if format.lower() == "json":
         import json as _json
+
         return _json.loads(report_str)
     return {"format": format, "content": report_str}
 
@@ -418,7 +423,7 @@ async def download_file(
     characters are accepted.
     """
     # Reject filenames containing directory separators or non-safe characters.
-    if not re.match(r'^[A-Za-z0-9_\-]+\.csv$', file_name):
+    if not re.match(r"^[A-Za-z0-9_\-]+\.csv$", file_name):
         raise HTTPException(status_code=400, detail="Invalid file name")
 
     resolved = os.path.realpath(os.path.join(EXPORT_DIR, file_name))

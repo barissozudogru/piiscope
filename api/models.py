@@ -6,23 +6,23 @@ migrations can be generated separately if desired.  For simplicity
 this project defines the schema programmatically and uses SQLAlchemy
 `Base.metadata.create_all()` to create tables on startup.
 """
+
 from __future__ import annotations
 
 import enum
 from datetime import datetime, timezone
-from typing import Optional, List
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     Column,
     DateTime,
     Enum,
+    Float,
     ForeignKey,
     Integer,
     String,
     Text,
-    JSON,
-    Float,
 )
 from sqlalchemy.orm import relationship
 
@@ -44,7 +44,11 @@ class User(Base):
     password_hash = Column(String(128), nullable=False)
     role = Column(Enum(RoleEnum), default=RoleEnum.USER, nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )  # noqa: E501
 
     scan_jobs = relationship("ScanJob", back_populates="user")
     audit_logs = relationship("AuditLog", back_populates="user")
@@ -60,7 +64,11 @@ class Profile(Base):
     definition = Column(JSON, nullable=False)  # Stores patterns, dictionaries, weights
     created_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )  # noqa: E501
 
     created_by = relationship("User")
     scan_jobs = relationship("ScanJob", back_populates="profile")
@@ -96,7 +104,9 @@ class ScanJob(Base):
     profile = relationship("Profile", back_populates="scan_jobs")
     data_source = relationship("DataSource", back_populates="scan_jobs")
     findings = relationship("Finding", back_populates="job", cascade="all, delete-orphan")
-    metrics = relationship("Metric", back_populates="job", uselist=False, cascade="all, delete-orphan")
+    metrics = relationship(
+        "Metric", back_populates="job", uselist=False, cascade="all, delete-orphan"
+    )  # noqa: E501
     reports = relationship("Report", back_populates="job", cascade="all, delete-orphan")
     masks = relationship("Mask", back_populates="job", cascade="all, delete-orphan")
 
@@ -204,7 +214,11 @@ class DataSource(Base):
     last_tested_at = Column(DateTime, nullable=True)
     test_error = Column(Text, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )  # noqa: E501
 
     user = relationship("User")
     scan_jobs = relationship("ScanJob", back_populates="data_source")

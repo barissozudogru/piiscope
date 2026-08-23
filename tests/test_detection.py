@@ -1,32 +1,39 @@
 """Tests for improved PII detection: checksums, context-awareness, new patterns."""
+
 from __future__ import annotations
 
-import sys
 import os
+import sys
 
 # Allow importing without a full app installation
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-import pytest
 import pandas as pd
 
-from api.detection.validators import luhn_check, iban_check, tc_kimlik_check, is_private_ip, is_valid_ipv4, column_name_context_boost
-from api.detection.regex_patterns import PATTERNS, build_custom_patterns
-from api.detection.engine import DetectionEngine, Finding
-from api.detection.metrics import (
+from piiscope.detection.engine import DetectionEngine
+from piiscope.detection.regex_patterns import PATTERNS, build_custom_patterns
+from piiscope.detection.validators import (
+    column_name_context_boost,
+    iban_check,
+    is_private_ip,
+    is_valid_ipv4,
+    luhn_check,
+    tc_kimlik_check,
+)
+from piiscope.metrics.metrics import (
     compute_k_anonymity,
     compute_l_diversity,
-    compute_t_closeness,
     compute_reidentification_risk,
+    compute_t_closeness,
     estimate_dp_epsilon,
-    get_masking_recommendations,
     generate_privacy_impact_assessment,
+    get_masking_recommendations,
 )
-
 
 # ============================================================================
 # Luhn algorithm tests
 # ============================================================================
+
 
 class TestLuhnCheck:
     def test_valid_visa(self):
@@ -69,6 +76,7 @@ class TestLuhnCheck:
 # IBAN validation tests
 # ============================================================================
 
+
 class TestIBANCheck:
     def test_valid_german_iban(self):
         assert iban_check("DE89370400440532013000") is True
@@ -99,6 +107,7 @@ class TestIBANCheck:
 # TC Kimlik validation tests
 # ============================================================================
 
+
 class TestTCKimlikCheck:
     def test_valid_tc_kimlik(self):
         # A well-known valid TC Kimlik test number
@@ -122,6 +131,7 @@ class TestTCKimlikCheck:
 # ============================================================================
 # IPv4 tests
 # ============================================================================
+
 
 class TestIPv4:
     def test_valid_public_ip(self):
@@ -152,6 +162,7 @@ class TestIPv4:
 # ============================================================================
 # Context-aware confidence tests
 # ============================================================================
+
 
 class TestColumnNameContext:
     def test_email_in_email_column_boosts(self):
@@ -190,6 +201,7 @@ class TestColumnNameContext:
 # ============================================================================
 # Regex pattern tests
 # ============================================================================
+
 
 class TestPatterns:
     def test_email_matches(self):
@@ -232,6 +244,7 @@ class TestPatterns:
 # Custom pattern support tests
 # ============================================================================
 
+
 class TestCustomPatterns:
     def test_build_custom_pattern_basic(self):
         custom_defs = [
@@ -254,9 +267,7 @@ class TestCustomPatterns:
         assert "bad" not in result
 
     def test_missing_id_is_skipped(self):
-        custom_defs = [
-            {"pattern": r"\bEMP[0-9]{5}\b", "description": "No ID", "severity": 0.5}
-        ]
+        custom_defs = [{"pattern": r"\bEMP[0-9]{5}\b", "description": "No ID", "severity": 0.5}]
         result = build_custom_patterns(custom_defs)
         assert len(result) == 0
 
@@ -271,6 +282,7 @@ class TestCustomPatterns:
 # ============================================================================
 # Detection engine tests
 # ============================================================================
+
 
 class TestDetectionEngine:
     def setup_method(self):
@@ -331,37 +343,35 @@ class TestDetectionEngine:
         assert "tc_kimlik" not in rule_ids
 
     def test_suppression_rule_removes_finding(self):
-        engine_with_suppression = DetectionEngine({
-            "suppression_rules": [
-                {"rule_id": "email", "column_name": "contact"}
-            ]
-        })
+        engine_with_suppression = DetectionEngine(
+            {"suppression_rules": [{"rule_id": "email", "column_name": "contact"}]}
+        )
         findings = engine_with_suppression.detect_cell("alice@example.com", "contact")
         rule_ids = [f.rule_id for f in findings]
         assert "email" not in rule_ids
 
     def test_suppression_only_affects_matching_column(self):
-        engine_with_suppression = DetectionEngine({
-            "suppression_rules": [
-                {"rule_id": "email", "column_name": "contact"}
-            ]
-        })
+        engine_with_suppression = DetectionEngine(
+            {"suppression_rules": [{"rule_id": "email", "column_name": "contact"}]}
+        )
         # "email" column is NOT suppressed, only "contact"
         findings = engine_with_suppression.detect_cell("alice@example.com", "email")
         rule_ids = [f.rule_id for f in findings]
         assert "email" in rule_ids
 
     def test_custom_patterns_loaded_from_profile(self):
-        engine_custom = DetectionEngine({
-            "custom_patterns": [
-                {
-                    "id": "employee_id",
-                    "pattern": r"\bEMP[0-9]{5}\b",
-                    "description": "Employee ID",
-                    "severity": 0.6,
-                }
-            ]
-        })
+        engine_custom = DetectionEngine(
+            {
+                "custom_patterns": [
+                    {
+                        "id": "employee_id",
+                        "pattern": r"\bEMP[0-9]{5}\b",
+                        "description": "Employee ID",
+                        "severity": 0.6,
+                    }
+                ]
+            }
+        )
         findings = engine_custom.detect_cell("EMP12345", "staff_id")
         rule_ids = [f.rule_id for f in findings]
         assert "employee_id" in rule_ids
@@ -390,13 +400,16 @@ class TestDetectionEngine:
 # Privacy metrics tests
 # ============================================================================
 
+
 class TestPrivacyMetrics:
     def _sample_df(self):
-        return pd.DataFrame({
-            "age": ["25", "25", "30", "30", "30"],
-            "zip": ["12345", "12345", "12345", "67890", "67890"],
-            "disease": ["flu", "flu", "flu", "cold", "cancer"],
-        })
+        return pd.DataFrame(
+            {
+                "age": ["25", "25", "30", "30", "30"],
+                "zip": ["12345", "12345", "12345", "67890", "67890"],
+                "disease": ["flu", "flu", "flu", "cold", "cancer"],
+            }
+        )
 
     def test_k_anonymity(self):
         df = self._sample_df()
@@ -414,9 +427,9 @@ class TestPrivacyMetrics:
 
     def test_l_diversity(self):
         df = self._sample_df()
-        l = compute_l_diversity(df, ["age", "zip"], "disease")
+        l_div = compute_l_diversity(df, ["age", "zip"], "disease")
         # (30, 67890) has cold+cancer = 2 distinct; (30, 12345) has 1; (25, 12345) has 1
-        assert l == 1
+        assert l_div == 1
 
     def test_l_diversity_missing_sensitive_attr(self):
         df = self._sample_df()
@@ -429,10 +442,12 @@ class TestPrivacyMetrics:
         assert 0.0 <= t <= 1.0
 
     def test_reidentification_risk_unique_records(self):
-        df = pd.DataFrame({
-            "age": ["25", "30", "35", "40"],
-            "zip": ["10001", "10002", "10003", "10004"],
-        })
+        df = pd.DataFrame(
+            {
+                "age": ["25", "30", "35", "40"],
+                "zip": ["10001", "10002", "10003", "10004"],
+            }
+        )
         risk = compute_reidentification_risk(df, ["age", "zip"])
         # All records are unique → prosecutor_risk = 1.0
         assert risk["prosecutor_risk"] == 1.0
@@ -440,10 +455,12 @@ class TestPrivacyMetrics:
         assert risk["risk_level"] == "critical"
 
     def test_reidentification_risk_large_groups(self):
-        df = pd.DataFrame({
-            "age": ["25"] * 100,
-            "zip": ["10001"] * 100,
-        })
+        df = pd.DataFrame(
+            {
+                "age": ["25"] * 100,
+                "zip": ["10001"] * 100,
+            }
+        )
         risk = compute_reidentification_risk(df, ["age", "zip"])
         # All 100 records in one group → risk = 0.01
         assert risk["prosecutor_risk"] == 0.01
@@ -458,6 +475,7 @@ class TestPrivacyMetrics:
 # ============================================================================
 # Differential privacy estimation tests
 # ============================================================================
+
 
 class TestDPEpsilon:
     def test_numeric_column_returns_epsilon(self):
@@ -489,6 +507,7 @@ class TestDPEpsilon:
 # Masking recommendations tests
 # ============================================================================
 
+
 class TestMaskingRecommendations:
     def test_financial_category(self):
         recs = get_masking_recommendations({"financial"})
@@ -512,6 +531,7 @@ class TestMaskingRecommendations:
 # ============================================================================
 # Privacy Impact Assessment tests
 # ============================================================================
+
 
 class TestPIA:
     def test_pia_structure(self):

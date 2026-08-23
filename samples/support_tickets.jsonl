@@ -1,0 +1,15 @@
+{"ticket_id": 201, "text": "Customer Ines Kaufmann wrote from ines.kaufmann@example.com that her card 4111111111111111 was charged twice on 2024-03-02. Please call her at +49 170 3948271."}
+{"ticket_id": 202, "text": "User cannot log in. Account email is mturner@example.net and the registered phone is (415) 555-0173. He confirms his SSN on file ends 6789."}
+{"ticket_id": 203, "text": "Refund requested for order 55-2211. Buyer Selim Aksoy, TCKN 10000000146, IBAN TR964163815472568253393077 was provided for the transfer."}
+{"ticket_id": 204, "text": "Patient portal complaint: Johan de Vries born 12-08-1965 says his diabetes readings are visible in the exported PDF. Email j.devries@example.nl."}
+{"ticket_id": 205, "text": "Delivery failed for 44 Kingsway, London WC2B 6UF. Recipient phone +44 20 7946 0333. Retry tomorrow before noon."}
+{"ticket_id": 206, "text": "Fraud alert follow-up: transaction from 192.168.1.44 then 82.14.55.9 on 2024-04-11. Customer card ending 0055, full number 378282246310005."}
+{"ticket_id": 207, "text": "Newsletter unsubscribe. Contact klara.novak@example.org, phone +420 601 555 221. Remove all tracking data per KVKK request."}
+{"ticket_id": 208, "text": "Insurance claim for physiotherapy sessions at Klinikum Augsburg. Policy holder Petra Lang, born 03-11-1988, member ID DE8812345678."}
+{"ticket_id": 209, "text": "Account takeover attempt reported by oscar.reyes@example.com. Attacker reset attempts came from 203.0.113.77 at 02:14."}
+{"ticket_id": 210, "text": "Address change for account 88114: new billing address Hauptbahnhofstrasse 19, 60311 Frankfurt am Main. Verified by phone +49 69 555 0123."}
+{"ticket_id": 211, "text": "Customer complains the invoice shows the full card number 5500005555555559 instead of the last four digits. Please fix the template."}
+{"ticket_id": 212, "text": "GDPR erasure request from ayse.korkmaz@example.net. She lists her TCKN 10000000382 and requests deletion of all call recordings."}
+{"ticket_id": 213, "text": "Pharmacy order delayed. Prescription for Metformin 850mg for patient M. Weber, born 1959-07-30. Doctor: Dr. Aydin at Charité."}
+{"ticket_id": 214, "text": "Warranty claim for a laptop bought 15-01-2023. Buyer email hfischer@example.de, daytime phone +49 221 987 6543."}
+{"ticket_id": 215, "text": "VIP guest requests late checkout. Booking under Georgios Papadopoulos, card GB29 NWBK 6016 1331 9268 19, arrival 2024-06-01."}

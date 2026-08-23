@@ -5,35 +5,35 @@ database, invokes the detection engine and writes findings back to
 the database incrementally. Metrics are computed at the end and
 stored on the `metrics` table.
 """
+
 from __future__ import annotations
 
-import json
 import os
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Set
+from typing import Any
 
 import pandas as pd
 from celery import Celery
 from sqlalchemy.orm import Session
 
-from .config import settings
-from . import models
-from .database import SessionLocal
-from .detection.engine import DetectionEngine, Finding
-from .detection.metrics import (
+from piiscope.detection.engine import DetectionEngine, Finding
+from piiscope.metrics.metrics import (
     compute_k_anonymity,
     compute_l_diversity,
-    compute_t_closeness,
     compute_reidentification_risk,
+    compute_t_closeness,
     generate_privacy_impact_assessment,
 )
 
+from . import models
+from .config import settings
+from .database import SessionLocal
 
 celery_app = Celery(__name__, broker=settings.redis_url, backend=settings.redis_url)
 
 
 @celery_app.task(bind=True)
-def scan_file_task(self, job_id: int) -> None:
+def scan_file_task(self, job_id: int) -> dict[str, Any] | None:
     """Celery task to scan an uploaded file for sensitive data.
 
     The task retrieves the job and profile from the database, creates a
@@ -50,9 +50,7 @@ def scan_file_task(self, job_id: int) -> None:
     """
     db: Session = SessionLocal()
     try:
-        job: models.ScanJob = db.query(models.ScanJob).filter(
-            models.ScanJob.id == job_id
-        ).first()
+        job: models.ScanJob = db.query(models.ScanJob).filter(models.ScanJob.id == job_id).first()
         if not job:
             raise ValueError(f"ScanJob {job_id} not found")
 
@@ -63,18 +61,25 @@ def scan_file_task(self, job_id: int) -> None:
         profile = job.profile.definition
         engine_det = DetectionEngine(profile)
         file_path = job.file_path
+        if file_path is None:
+            job.status = models.ScanStatus.FAILED
+            job.error_message = "Database source scans are not yet supported in this task runner."
+            job.finished_at = datetime.now(timezone.utc)
+            db.commit()
+            return {"error": job.error_message}
+
         file_format = os.path.splitext(file_path)[1].lstrip(".").lower()
 
-        qi: List[str] = profile.get("quasi_identifiers") or []
-        sensitive_attr: Optional[str] = profile.get("sensitive_attribute")
+        qi: list[str] = profile.get("quasi_identifiers") or []
+        sensitive_attr: str | None = profile.get("sensitive_attribute")
 
         # Estimate total row count for progress reporting
-        total_rows: Optional[int] = None
+        total_rows: int | None = None
         try:
             if file_format in ("csv", "json"):
-                with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                with open(file_path, encoding="utf-8", errors="ignore") as f:
                     total_rows = sum(1 for _ in f)
-        except Exception:
+        except OSError:
             total_rows = None
 
         processed_rows = 0
@@ -82,10 +87,10 @@ def scan_file_task(self, job_id: int) -> None:
         # Collect quasi-identifier + sensitive-attribute values during the
         # streaming pass so we don't re-read the file per row.
         # Structure: {record_index: {col: value}}
-        qi_rows: Dict[int, Dict[str, Any]] = {}
-        pii_categories_seen: Set[str] = set()
+        qi_rows: dict[int, dict[str, Any]] = {}
+        pii_categories_seen: set[str] = set()
 
-        def callback(record_index: int, findings: List[Finding]) -> None:
+        def callback(record_index: int, findings: list[Finding]) -> None:
             nonlocal processed_rows
 
             for f in findings:
@@ -121,17 +126,23 @@ def scan_file_task(self, job_id: int) -> None:
         # This is cleaner than modifying DetectionEngine for a task concern.
         original_scan_row = engine_det.scan_row
 
-        def scan_row_with_collection(row: Dict[str, Any], record_index: int):
+        sampled_metrics = False
+
+        def scan_row_with_collection(row: dict[str, Any], record_index: int):
+            nonlocal sampled_metrics
             # Stash QI and sensitive-attr values for metrics computation
             if qi or sensitive_attr:
-                row_slice: Dict[str, Any] = {}
-                for col in qi:
-                    if col in row:
-                        row_slice[col] = row[col]
-                if sensitive_attr and sensitive_attr in row:
-                    row_slice[sensitive_attr] = row[sensitive_attr]
-                if row_slice:
-                    qi_rows[record_index] = row_slice
+                if len(qi_rows) < settings.metrics_sample_rows:
+                    row_slice: dict[str, Any] = {}
+                    for col in qi:
+                        if col in row:
+                            row_slice[col] = row[col]
+                    if sensitive_attr and sensitive_attr in row:
+                        row_slice[sensitive_attr] = row[sensitive_attr]
+                    if row_slice:
+                        qi_rows[record_index] = row_slice
+                else:
+                    sampled_metrics = True
             return original_scan_row(row, record_index)
 
         engine_det.scan_row = scan_row_with_collection  # type: ignore[method-assign]
@@ -150,10 +161,10 @@ def scan_file_task(self, job_id: int) -> None:
         # ------------------------------------------------------------------
         # Compute anonymisation metrics
         # ------------------------------------------------------------------
-        k = l = None
-        t: Optional[float] = None
-        reidentification: Optional[Dict[str, Any]] = None
-        pia: Optional[Dict[str, Any]] = None
+        k = l_val = None
+        t: float | None = None
+        reidentification: dict[str, Any] | None = None
+        pia: dict[str, Any] | None = None
 
         if qi and qi_rows:
             try:
@@ -168,25 +179,29 @@ def scan_file_task(self, job_id: int) -> None:
 
                 k = compute_k_anonymity(df_metrics, qi)
                 if sensitive_attr and sensitive_attr in df_metrics.columns:
-                    l = compute_l_diversity(df_metrics, qi, sensitive_attr)
+                    l_val = compute_l_diversity(df_metrics, qi, sensitive_attr)
                     t = compute_t_closeness(df_metrics, qi, sensitive_attr)
 
                 reidentification = compute_reidentification_risk(df_metrics, qi)
 
             except Exception as exc:
                 import logging
+
                 logging.getLogger(__name__).warning(
                     "Metrics computation failed for job %s: %s", job_id, exc
                 )
 
         # Build PIA summary
         try:
-            total_findings = db.query(models.Finding).filter(
-                models.Finding.job_id == job_id
-            ).count()
-            highest_severity_row = db.query(models.Finding).filter(
-                models.Finding.job_id == job_id
-            ).order_by(models.Finding.confidence.desc()).first()
+            total_findings = (
+                db.query(models.Finding).filter(models.Finding.job_id == job_id).count()
+            )
+            highest_severity_row = (
+                db.query(models.Finding)
+                .filter(models.Finding.job_id == job_id)
+                .order_by(models.Finding.confidence.desc())
+                .first()
+            )
 
             highest_sev = 0.0
             if highest_severity_row:
@@ -211,24 +226,21 @@ def scan_file_task(self, job_id: int) -> None:
                     "rules_triggered": rules_triggered,
                 },
                 k_anonymity=k,
-                l_diversity=l,
+                l_diversity=l_val,
                 t_closeness=t,
                 reidentification_risk=reidentification,
             )
         except Exception as exc:
             import logging
-            logging.getLogger(__name__).warning(
-                "PIA generation failed for job %s: %s", job_id, exc
-            )
+
+            logging.getLogger(__name__).warning("PIA generation failed for job %s: %s", job_id, exc)
 
         # Persist metrics
-        existing = db.query(models.Metric).filter(
-            models.Metric.job_id == job_id
-        ).first()
+        existing = db.query(models.Metric).filter(models.Metric.job_id == job_id).first()
         if existing:
             existing.quasi_identifiers = qi if qi else None
             existing.k_anonymity = k
-            existing.l_diversity = l
+            existing.l_diversity = l_val
             existing.t_closeness = t
             existing.reidentification_risk = reidentification
             existing.privacy_impact_assessment = pia
@@ -237,13 +249,25 @@ def scan_file_task(self, job_id: int) -> None:
                 job_id=job.id,
                 quasi_identifiers=qi if qi else None,
                 k_anonymity=k,
-                l_diversity=l,
+                l_diversity=l_val,
                 t_closeness=t,
                 reidentification_risk=reidentification,
                 privacy_impact_assessment=pia,
             )
             db.add(metric)
         db.commit()
+
+        if sampled_metrics:
+            if pia is not None:
+                pia["metrics_sampled"] = True
+                pia["metrics_sample_rows"] = settings.metrics_sample_rows
+
+            existing = db.query(models.Metric).filter(models.Metric.job_id == job_id).first()
+            if existing:
+                existing.privacy_impact_assessment = pia
+                db.commit()
+
+        return {"metrics_sampled": sampled_metrics} if sampled_metrics else None
 
     finally:
         db.close()

@@ -14,6 +14,7 @@ exponential back-off (max 5 retries).  Delivery results are logged.
 This module only contains the service logic.  The FastAPI router that
 exposes the CRUD endpoints lives in ``api/routes/webhook_routes.py``.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -25,10 +26,10 @@ import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
+from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
-from urllib.error import URLError, HTTPError
 
 logger = logging.getLogger(__name__)
 
@@ -49,9 +50,9 @@ _BLOCKED_NETWORKS = [
     ipaddress.ip_network("192.168.0.0/16"),
     ipaddress.ip_network("127.0.0.0/8"),
     ipaddress.ip_network("169.254.0.0/16"),  # link-local
-    ipaddress.ip_network("::1/128"),           # IPv6 loopback
-    ipaddress.ip_network("fc00::/7"),          # IPv6 unique-local
-    ipaddress.ip_network("fe80::/10"),         # IPv6 link-local
+    ipaddress.ip_network("::1/128"),  # IPv6 loopback
+    ipaddress.ip_network("fc00::/7"),  # IPv6 unique-local
+    ipaddress.ip_network("fe80::/10"),  # IPv6 link-local
 ]
 
 
@@ -86,7 +87,7 @@ def _validate_webhook_url(url: str) -> None:
         for network in _BLOCKED_NETWORKS:
             if addr in network:
                 raise ValueError(
-                    f"Webhook URL resolves to a private/reserved address ({addr}) which is not allowed"
+                    f"Webhook URL resolves to a private/reserved address ({addr}) which is not allowed"  # noqa: E501
                 )
     except ValueError as exc:
         # Re-raise if it was our own block message; otherwise it was just not
@@ -98,6 +99,7 @@ def _validate_webhook_url(url: str) -> None:
 # ---------------------------------------------------------------------------
 # Event types
 # ---------------------------------------------------------------------------
+
 
 class WebhookEvent(str, Enum):
     SCAN_COMPLETE = "scan_complete"
@@ -111,20 +113,17 @@ class WebhookEvent(str, Enum):
 # Webhook registration (in-memory store; callers should persist to DB)
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class WebhookRegistration:
-    id: str                          # UUID string
+    id: str  # UUID string
     url: str
-    events: List[WebhookEvent]       # events this webhook subscribes to
-    secret: Optional[str] = None     # HMAC-SHA256 signing secret
+    events: list[WebhookEvent]  # events this webhook subscribes to
+    secret: str | None = None  # HMAC-SHA256 signing secret
     enabled: bool = True
     description: str = ""
-    created_at: datetime = field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
-    updated_at: datetime = field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     def subscribes_to(self, event: WebhookEvent) -> bool:
         return self.enabled and event in self.events
@@ -134,6 +133,7 @@ class WebhookRegistration:
 # Delivery result
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class DeliveryResult:
     webhook_id: str
@@ -141,11 +141,9 @@ class DeliveryResult:
     url: str
     success: bool
     attempts: int
-    status_code: Optional[int]
-    error: Optional[str]
-    delivered_at: datetime = field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    status_code: int | None
+    error: str | None
+    delivered_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 # ---------------------------------------------------------------------------
@@ -153,11 +151,11 @@ class DeliveryResult:
 # ---------------------------------------------------------------------------
 
 _MAX_RETRIES = 5
-_BASE_DELAY = 1.0        # seconds
-_MAX_DELAY = 30.0        # seconds – tightened to keep total budget reasonable
+_BASE_DELAY = 1.0  # seconds
+_MAX_DELAY = 30.0  # seconds - tightened to keep total budget reasonable
 _BACKOFF_FACTOR = 2.0
-_CONNECT_TIMEOUT = 5     # seconds
-_READ_TIMEOUT = 10       # seconds
+_CONNECT_TIMEOUT = 5  # seconds
+_READ_TIMEOUT = 10  # seconds
 # Hard ceiling on the total time _deliver() may occupy a thread/worker.
 # With 5 retries and the sequence 1, 2, 4, 8, 16 s the raw sum is 31 s;
 # adding per-attempt I/O (up to 15 s each) would push a single call past
@@ -168,7 +166,7 @@ _MAX_TOTAL_SECONDS = 90.0
 
 def _compute_delay(attempt: int) -> float:
     """Exponential back-off with a cap."""
-    delay = _BASE_DELAY * (_BACKOFF_FACTOR ** attempt)
+    delay = _BASE_DELAY * (_BACKOFF_FACTOR**attempt)
     return min(delay, _MAX_DELAY)
 
 
@@ -176,11 +174,12 @@ def _compute_delay(attempt: int) -> float:
 # Payload builder
 # ---------------------------------------------------------------------------
 
+
 def _build_payload(
     event: WebhookEvent,
     scan_id: int,
-    data: Dict[str, Any],
-) -> Dict[str, Any]:
+    data: dict[str, Any],
+) -> dict[str, Any]:
     return {
         "event": event.value,
         "scan_id": scan_id,
@@ -198,9 +197,10 @@ def _sign_payload(secret: str, body: bytes) -> str:
 # Delivery logic
 # ---------------------------------------------------------------------------
 
+
 def _deliver(
     webhook: WebhookRegistration,
-    payload: Dict[str, Any],
+    payload: dict[str, Any],
 ) -> DeliveryResult:
     """Deliver ``payload`` to ``webhook.url`` with exponential back-off.
 
@@ -214,7 +214,9 @@ def _deliver(
     except ValueError as exc:
         logger.error(
             "Webhook %s blocked: SSRF check failed for URL %s: %s",
-            webhook.id, webhook.url, exc,
+            webhook.id,
+            webhook.url,
+            exc,
         )
         return DeliveryResult(
             webhook_id=webhook.id,
@@ -238,8 +240,8 @@ def _deliver(
     if signature:
         headers["X-Signature-SHA256"] = f"sha256={signature}"
 
-    last_error: Optional[str] = None
-    last_status: Optional[int] = None
+    last_error: str | None = None
+    last_status: int | None = None
     deadline = time.monotonic() + _MAX_TOTAL_SECONDS
 
     for attempt in range(_MAX_RETRIES):
@@ -248,7 +250,9 @@ def _deliver(
             last_error = "delivery aborted: total timeout exceeded"
             logger.warning(
                 "Webhook %s: %s after %d attempt(s)",
-                webhook.id, last_error, attempt,
+                webhook.id,
+                last_error,
+                attempt,
             )
             break
 
@@ -264,7 +268,11 @@ def _deliver(
                 if 200 <= resp.status < 300:
                     logger.info(
                         "Webhook %s delivered event '%s' to %s (attempt %d, status %d)",
-                        webhook.id, payload["event"], webhook.url, attempt + 1, resp.status,
+                        webhook.id,
+                        payload["event"],
+                        webhook.url,
+                        attempt + 1,
+                        resp.status,
                     )
                     return DeliveryResult(
                         webhook_id=webhook.id,
@@ -279,7 +287,9 @@ def _deliver(
                 last_error = f"HTTP {resp.status}"
                 logger.warning(
                     "Webhook %s delivery attempt %d returned HTTP %d",
-                    webhook.id, attempt + 1, resp.status,
+                    webhook.id,
+                    attempt + 1,
+                    resp.status,
                 )
 
         except HTTPError as exc:
@@ -287,19 +297,25 @@ def _deliver(
             last_error = f"HTTP {exc.code}: {exc.reason}"
             logger.warning(
                 "Webhook %s delivery attempt %d: HTTP error %d",
-                webhook.id, attempt + 1, exc.code,
+                webhook.id,
+                attempt + 1,
+                exc.code,
             )
         except URLError as exc:
             last_error = str(exc.reason)
             logger.warning(
                 "Webhook %s delivery attempt %d: URL error: %s",
-                webhook.id, attempt + 1, exc.reason,
+                webhook.id,
+                attempt + 1,
+                exc.reason,
             )
         except Exception as exc:  # noqa: BLE001
             last_error = str(exc)
             logger.warning(
                 "Webhook %s delivery attempt %d: unexpected error: %s",
-                webhook.id, attempt + 1, exc,
+                webhook.id,
+                attempt + 1,
+                exc,
             )
 
         if attempt < _MAX_RETRIES - 1:
@@ -315,13 +331,19 @@ def _deliver(
             sleep_for = min(delay, remaining)
             logger.debug(
                 "Webhook %s: retrying in %.1fs (attempt %d/%d)",
-                webhook.id, sleep_for, attempt + 1, _MAX_RETRIES,
+                webhook.id,
+                sleep_for,
+                attempt + 1,
+                _MAX_RETRIES,
             )
             time.sleep(sleep_for)
 
     logger.error(
         "Webhook %s failed to deliver event '%s' after %d attempts: %s",
-        webhook.id, payload["event"], _MAX_RETRIES, last_error,
+        webhook.id,
+        payload["event"],
+        _MAX_RETRIES,
+        last_error,
     )
     return DeliveryResult(
         webhook_id=webhook.id,
@@ -338,6 +360,7 @@ def _deliver(
 # Webhook service
 # ---------------------------------------------------------------------------
 
+
 class WebhookService:
     """Manage webhook registrations and dispatch notifications.
 
@@ -346,7 +369,7 @@ class WebhookService:
     """
 
     def __init__(self) -> None:
-        self._registry: Dict[str, WebhookRegistration] = {}
+        self._registry: dict[str, WebhookRegistration] = {}
 
     # ------------------------------------------------------------------
     # Registry management
@@ -357,7 +380,8 @@ class WebhookService:
         self._registry[registration.id] = registration
         logger.info(
             "Webhook registered: id=%s url=%s events=%s",
-            registration.id, registration.url,
+            registration.id,
+            registration.url,
             [e.value for e in registration.events],
         )
         return registration
@@ -370,21 +394,21 @@ class WebhookService:
             return True
         return False
 
-    def get(self, webhook_id: str) -> Optional[WebhookRegistration]:
+    def get(self, webhook_id: str) -> WebhookRegistration | None:
         return self._registry.get(webhook_id)
 
-    def list_all(self) -> List[WebhookRegistration]:
+    def list_all(self) -> list[WebhookRegistration]:
         return list(self._registry.values())
 
     def update(
         self,
         webhook_id: str,
-        url: Optional[str] = None,
-        events: Optional[List[WebhookEvent]] = None,
-        secret: Optional[str] = None,
-        enabled: Optional[bool] = None,
-        description: Optional[str] = None,
-    ) -> Optional[WebhookRegistration]:
+        url: str | None = None,
+        events: list[WebhookEvent] | None = None,
+        secret: str | None = None,
+        enabled: bool | None = None,
+        description: str | None = None,
+    ) -> WebhookRegistration | None:
         reg = self._registry.get(webhook_id)
         if reg is None:
             return None
@@ -411,15 +435,15 @@ class WebhookService:
         self,
         event: WebhookEvent,
         scan_id: int,
-        data: Dict[str, Any],
-    ) -> List[DeliveryResult]:
+        data: dict[str, Any],
+    ) -> list[DeliveryResult]:
         """Notify all subscribed webhooks of an event.
 
         Delivery is synchronous.  For high-throughput production environments
         this should be moved to a background task queue (Celery / ARQ).
         """
         payload = _build_payload(event, scan_id, data)
-        results: List[DeliveryResult] = []
+        results: list[DeliveryResult] = []
 
         for reg in self._registry.values():
             if not reg.subscribes_to(event):
@@ -435,7 +459,7 @@ class WebhookService:
         status: str,
         total_findings: int,
         aggregate_risk: float,
-    ) -> List[DeliveryResult]:
+    ) -> list[DeliveryResult]:
         return self.notify(
             WebhookEvent.SCAN_COMPLETE,
             scan_id,
@@ -453,7 +477,7 @@ class WebhookService:
         rule_id: str,
         risk_score: float,
         column_name: str,
-    ) -> List[DeliveryResult]:
+    ) -> list[DeliveryResult]:
         return self.notify(
             WebhookEvent.CRITICAL_FINDING,
             scan_id,
@@ -468,9 +492,9 @@ class WebhookService:
     def notify_compliance_violation(
         self,
         scan_id: int,
-        categories: List[str],
+        categories: list[str],
         dpia_required: bool,
-    ) -> List[DeliveryResult]:
+    ) -> list[DeliveryResult]:
         return self.notify(
             WebhookEvent.COMPLIANCE_VIOLATION,
             scan_id,
@@ -484,23 +508,25 @@ class WebhookService:
     # Serialisation helpers
     # ------------------------------------------------------------------
 
-    def dump_registry(self) -> List[Dict[str, Any]]:
+    def dump_registry(self) -> list[dict[str, Any]]:
         """Serialise all registrations for external persistence."""
         result = []
         for reg in self._registry.values():
-            result.append({
-                "id": reg.id,
-                "url": reg.url,
-                "events": [e.value for e in reg.events],
-                "secret": reg.secret,
-                "enabled": reg.enabled,
-                "description": reg.description,
-                "created_at": reg.created_at.isoformat(),
-                "updated_at": reg.updated_at.isoformat(),
-            })
+            result.append(
+                {
+                    "id": reg.id,
+                    "url": reg.url,
+                    "events": [e.value for e in reg.events],
+                    "secret": reg.secret,
+                    "enabled": reg.enabled,
+                    "description": reg.description,
+                    "created_at": reg.created_at.isoformat(),
+                    "updated_at": reg.updated_at.isoformat(),
+                }
+            )
         return result
 
-    def load_registry(self, data: List[Dict[str, Any]]) -> None:
+    def load_registry(self, data: list[dict[str, Any]]) -> None:
         """Restore registrations from persisted data."""
         for item in data:
             try:

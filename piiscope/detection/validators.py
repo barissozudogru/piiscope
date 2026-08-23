@@ -4,10 +4,10 @@ These validators reduce false positives by applying mathematical
 checks on top of regex pattern matches. They are called after an
 initial regex match confirms the rough format of a value.
 """
+
 from __future__ import annotations
 
 import re
-from typing import Optional
 
 
 def luhn_check(number: str) -> bool:
@@ -45,20 +45,74 @@ def iban_check(value: str) -> bool:
 
     # Known IBAN lengths by country code (not exhaustive but covers EU + TR)
     COUNTRY_LENGTHS: dict[str, int] = {
-        "AL": 28, "AD": 24, "AT": 20, "AZ": 28, "BH": 22,
-        "BE": 16, "BA": 20, "BR": 29, "BG": 22, "CR": 22,
-        "HR": 21, "CY": 28, "CZ": 24, "DK": 18, "DO": 28,
-        "EE": 20, "FO": 18, "FI": 18, "FR": 27, "GE": 22,
-        "DE": 22, "GI": 23, "GR": 27, "GL": 18, "GT": 28,
-        "HU": 28, "IS": 26, "IE": 22, "IL": 23, "IT": 27,
-        "JO": 30, "KZ": 20, "XK": 20, "KW": 30, "LV": 21,
-        "LB": 28, "LI": 21, "LT": 20, "LU": 20, "MK": 19,
-        "MT": 31, "MR": 27, "MU": 30, "MD": 24, "MC": 27,
-        "ME": 22, "NL": 18, "NO": 15, "PK": 24, "PS": 29,
-        "PL": 28, "PT": 25, "QA": 29, "RO": 24, "SM": 27,
-        "SA": 24, "RS": 22, "SK": 24, "SI": 19, "ES": 24,
-        "SE": 24, "CH": 21, "TL": 23, "TN": 24, "TR": 26,
-        "AE": 23, "GB": 22, "VG": 24,
+        "AL": 28,
+        "AD": 24,
+        "AT": 20,
+        "AZ": 28,
+        "BH": 22,
+        "BE": 16,
+        "BA": 20,
+        "BR": 29,
+        "BG": 22,
+        "CR": 22,
+        "HR": 21,
+        "CY": 28,
+        "CZ": 24,
+        "DK": 18,
+        "DO": 28,
+        "EE": 20,
+        "FO": 18,
+        "FI": 18,
+        "FR": 27,
+        "GE": 22,
+        "DE": 22,
+        "GI": 23,
+        "GR": 27,
+        "GL": 18,
+        "GT": 28,
+        "HU": 28,
+        "IS": 26,
+        "IE": 22,
+        "IL": 23,
+        "IT": 27,
+        "JO": 30,
+        "KZ": 20,
+        "XK": 20,
+        "KW": 30,
+        "LV": 21,
+        "LB": 28,
+        "LI": 21,
+        "LT": 20,
+        "LU": 20,
+        "MK": 19,
+        "MT": 31,
+        "MR": 27,
+        "MU": 30,
+        "MD": 24,
+        "MC": 27,
+        "ME": 22,
+        "NL": 18,
+        "NO": 15,
+        "PK": 24,
+        "PS": 29,
+        "PL": 28,
+        "PT": 25,
+        "QA": 29,
+        "RO": 24,
+        "SM": 27,
+        "SA": 24,
+        "RS": 22,
+        "SK": 24,
+        "SI": 19,
+        "ES": 24,
+        "SE": 24,
+        "CH": 21,
+        "TL": 23,
+        "TN": 24,
+        "TR": 26,
+        "AE": 23,
+        "GB": 22,
+        "VG": 24,
     }
     country = iban[:2]
     expected_len = COUNTRY_LENGTHS.get(country)
@@ -146,28 +200,86 @@ def is_valid_ipv4(ip: str) -> bool:
 def is_valid_ipv6(value: str) -> bool:
     """Return True if the string looks like a valid IPv6 address."""
     import socket
+
     try:
         socket.inet_pton(socket.AF_INET6, value)
         return True
-    except (socket.error, OSError):
+    except OSError:
         return False
 
 
 # Columns where a name match should NOT be treated as a person name
-_NAME_NEGATIVE_COLUMN_CONTEXTS = frozenset({
-    "product", "item", "category", "label", "type", "status",
-    "description", "comment", "note", "message", "content", "subject",
-    "title", "code", "key", "tag", "version", "url", "path",
-    "filename", "format", "action", "event", "method", "source",
-})
+_NAME_NEGATIVE_COLUMN_CONTEXTS = frozenset(
+    {
+        "product",
+        "item",
+        "category",
+        "label",
+        "type",
+        "status",
+        "description",
+        "comment",
+        "note",
+        "message",
+        "content",
+        "subject",
+        "title",
+        "code",
+        "key",
+        "tag",
+        "version",
+        "url",
+        "path",
+        "filename",
+        "format",
+        "action",
+        "event",
+        "method",
+        "source",
+    }
+)
 
 # Columns where a name match IS strongly expected to be a person name
-_NAME_POSITIVE_COLUMN_CONTEXTS = frozenset({
-    "name", "full_name", "fullname", "first_name", "last_name",
-    "given_name", "surname", "patient", "employee", "author",
-    "contact", "person", "owner", "user", "client", "customer",
-    "recipient", "sender", "buyer", "applicant", "vendor",
-})
+_NAME_POSITIVE_COLUMN_CONTEXTS = frozenset(
+    {
+        "name",
+        "full_name",
+        "fullname",
+        "first_name",
+        "last_name",
+        "given_name",
+        "surname",
+        "patient",
+        "employee",
+        "author",
+        "contact",
+        "person",
+        "owner",
+        "user",
+        "client",
+        "customer",
+        "recipient",
+        "sender",
+        "buyer",
+        "applicant",
+        "vendor",
+        "lastname",
+        "family_name",
+        "familyname",
+        "nachname",
+        "soyad",
+        "soyadi",
+        "apellido",
+        "apellidos",
+        "sobrenome",
+        "nom",
+        "cognome",
+        "achternaam",
+        "nazwisko",
+        "customer_name",
+        "contact_name",
+    }
+)
 
 
 def column_name_context_boost(column_name: str, rule_id: str) -> float:
@@ -181,7 +293,7 @@ def column_name_context_boost(column_name: str, rule_id: str) -> float:
     # Strip common prefixes/suffixes for matching
     col_clean = col_lower
 
-    if rule_id in ("given_name", "ner_person"):
+    if rule_id in ("given_name", "surname", "ner_person"):
         for ctx in _NAME_POSITIVE_COLUMN_CONTEXTS:
             if ctx in col_clean:
                 return 1.4
@@ -199,7 +311,18 @@ def column_name_context_boost(column_name: str, rule_id: str) -> float:
 
     if rule_id == "credit_card":
         positive = {"card", "credit", "payment", "cc", "pan"}
-        negative = {"id", "code", "ref", "order", "product", "item", "sku", "index", "count", "total"}
+        negative = {
+            "id",
+            "code",
+            "ref",
+            "order",
+            "product",
+            "item",
+            "sku",
+            "index",
+            "count",
+            "total",
+        }
         for p in positive:
             if p in col_clean:
                 return 1.5
@@ -221,7 +344,7 @@ def column_name_context_boost(column_name: str, rule_id: str) -> float:
         return 1.0
 
     if rule_id in ("eu_phone", "phone", "us_phone", "tr_phone"):
-        if "phone" in col_clean or "tel" in col_clean or "mobile" in col_clean or "fax" in col_clean:
+        if any(word in col_clean for word in ("phone", "tel", "mobile", "fax")):
             return 1.5
         return 1.0
 

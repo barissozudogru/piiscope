@@ -1,0 +1,41 @@
+customer_id,name,email,phone,iban,birth_date,street,city,country,tckn,ssn,credit_card,notes
+1001,Anna Schmidt,anna.schmidt@example.com,+49 30 12345678,DE96724049984426097509,1985-06-15,Kurfuerstendamm 21,Berlin,DE,,,4111111111111111,Registered for the loyalty programme. No health data on file.
+1002,Max Weber,max.weber@example.org,+49-170-1234567,DE32267278377601938101,1978-11-02,Hauptstrasse 8,Munich,DE,,,5500005555555559,Asked for invoice copies from March. Prefers email delivery.
+1003,Elif Yilmaz,elif.yilmaz@example.net,+90 532 123 45 67,TR964163815472568253393077,1990-03-21,Bagdat Caddesi 154,Istanbul,TR,10000000146,,6011111111111117,"Type 2 diabetes, prescribed Metformin 500mg. Follow-up every 3 months."
+1004,John Carter,john.carter@example.com,(212) 555-0134,GB13GPLQ28725709049316,1982-09-30,21 Elm Street,Manchester,GB,,123-45-6789,4012888888881881,Shipped order 8841 to the billing address. No special notes.
+1005,Maria Gonzalez,maria.gonzalez@example.org,+34 91 123 4567,FR150899916996ZD80055622129,1993-01-17,12 Rue de la Paix,Paris,FR,,,5105105105105100,Requested account deletion under GDPR Art. 17.
+1006,Peter Novak,peter.novak@example.net,+48 22 555 0199,NL37ETXJ3736163241,1975-07-08,Keizersgracht 42,Amsterdam,NL,,,4111 1111 1111 1111,"Recurring migraine, takes Ibuprofen 400mg as needed."
+1007,Laura Becker,laura.becker@example.com,+49 221 987 6543,DE27341115284355966880,1988-04-25,Domstrasse 3,Cologne,DE,,,5500 0055 5555 5559,Treatment at Charite dermatology clinic completed in April.
+1008,Ahmet Demir,ahmet.demir@example.net,+90 212 555 1234,TR547136325841286337933325,1980-12-09,istiklal Caddesi 10,Istanbul,TR,10000000214,,6011 1111 1111 1117,"Hypertension diagnosed 2021, on daily Aspirin 100mg."
+1009,Emily Watson,emily.watson@example.com,+44 20 7946 0958,GB41VCYP35347167308930,1995-05-14,4 Kings Road,London,GB,,515-22-9874,4012 8888 8888 1881,Subscription renewed automatically. Card on file verified.
+1010,Hans Fischer,hans.fischer@example.org,+49 89 555 01234,DE08850756677265230095,1969-02-28,Sendlinger Tor 15,Munich,DE,,,5105 1051 0510 5100,"Klinikum referral for knee surgery, scheduled for June."
+1011,Zeynep Kaya,zeynep.kaya@example.net,+90 533 987 65 43,TR818175089848530887898690,1992-08-19,Bahcelievler 7 Sokak,Ankara,TR,10000000382,,4111111111111111,Asthma inhaler prescription refilled twice per year.
+1012,Anna Novak,anna.novak@example.com,+1 415 555 0198,FR081169875137VC83953111145,1987-10-06,88 Market Street,San Francisco,US,,601-14-8732,5500005555555559,Newsletter engagement is high. Sent product survey.
+1013,George Miller,george.miller@example.org,+44 161 555 0177,GB03VIKU26005661811465,1972-06-30,12 Chapel Street,Manchester,GB,,123-45-6789,6011111111111117,Delivery preference confirmed. No issues reported.
+1014,Maria Rossi,maria.rossi@example.net,+39 06 555 0123,NL97VYRN0000709764,1994-12-11,Via del Corso 22,Rome,IT,,,4012888888881881,"Pregnancy follow-up at University Hospital, third trimester."
+1015,Peter Schmidt,peter.schmidt@example.com,+49 711 555 0166,DE96724049984426097509,1983-03-03,Koenigstrasse 45,Stuttgart,DE,,,5105105105105100,Insurance verification pending. No health data on file.
+1016,Elif Demir,elif.demir@example.org,+90 555 444 33 22,TR073836268790972327186485,1996-07-24,Ataturk Bulvari 89,Izmir,TR,10000000450,,4111 1111 1111 1111,Vendor account. Buys wholesale for a pharmacy chain.
+1017,John Weber,john.weber@example.net,+1 305 555 0143,FR243008225405SN06330235547,1991-01-05,300 Ocean Drive,Miami,US,,515-22-9874,5500 0055 5555 5559,"Back pain, prescribed Paracetamol and physiotherapy."
+1018,Laura Yilmaz,laura.yilmaz@example.com,+90 312 555 0188,TR964163815472568253393077,1986-09-17,Tunali Hilmi Caddesi 55,Ankara,TR,10000000528,,6011 1111 1111 1117,Seasonal allergies. Uses over the counter antihistamines.
+1019,Hans Becker,hans.becker@example.org,+49 351 555 0111,DE32267278377601938101,1977-05-21,Frauenkirchstrasse 12,Dresden,DE,,,4012 8888 8888 1881,Enrolled in the diabetes prevention study. Consent form signed.
+1020,Emily Fischer,emily.fischer@example.net,+44 131 555 0122,GB13GPLQ28725709049316,1998-02-13,7 Royal Mile,Edinburgh,GB,,601-14-8732,5105 1051 0510 5100,Student discount applied. Verification via university email.
+1021,Zeynep Carter,zeynep.carter@example.com,+1 646 555 0177,GB41VCYP35347167308930,1990-11-28,350 Broadway,New York,US,,123-45-6789,4111111111111111,Filed a support ticket about duplicate charges. Resolved.
+1022,Max Gonzalez,max.gonzalez@example.org,+34 93 555 0144,NL17WPOI4999666572,1984-08-08,Passeig de Gracia 9,Barcelona,ES,,,5500005555555559,"Cholesterol medication, Atorvastatin 20mg, nightly."
+1023,Anna Watson,anna.watson@example.net,+44 20 7946 0233,GB03VIKU26005661811465,1989-04-02,15 Baker Street,London,GB,,,6011111111111117,Membership upgraded. Payment method confirmed.
+1024,Ahmet Schmidt,ahmet.schmidt@example.com,+49 30 555 0155,DE27341115284355966880,1973-10-19,Unter den Linden 6,Berlin,DE,,,4012888888881881,"Cardiology follow-up after stent placement, stable."
+1025,John Rossi,john.rossi@example.org,+39 02 555 0166,FR150899916996ZD80055622129,1981-06-07,Piazza Duomo 4,Milan,IT,,,5105105105105100,Shipping address verified. Phone preferred for contact.
+1026,Laura Novak,laura.novak@example.net,+48 71 555 0133,NL37ETXJ3736163241,1997-12-24,Rynek 18,Wroclaw,PL,,,4111 1111 1111 1111,No marketing consent. Transactional messages only.
+1027,Peter Yilmaz,peter.yilmaz@example.com,+90 216 555 0199,TR818175089848530887898690,1985-01-30,Bagdat Caddesi 400,Istanbul,TR,10000000696,,5500 0055 5555 5559,"Sleep disorder assessment scheduled at Klinikum."
+1028,Emily Demir,emily.demir@example.org,+90 542 555 01 77,TR073836268790972327186485,1993-05-16,Cumhuriyet Caddesi 25,Bursa,TR,10000000764,,6011 1111 1111 1117,Bought a fitness tracker. Syncs weight and heart rate.
+1029,Hans Miller,hans.miller@example.net,+44 121 555 0188,GB41VCYP35347167308930,1968-07-12,9 Broad Street,Birmingham,GB,,515-22-9874,4012 8888 8888 1881,Requested paper invoices. Address confirmed by post.
+1030,Zeynep Weber,zeynep.weber@example.com,+49 69 555 0123,DE08850756677265230095,1995-09-09,Zeil 106,Frankfurt,DE,,,5105 1051 0510 5100,"Insulin dependent since childhood. Ships cold chain."
+1031,Max Becker,max.becker@example.org,+49 221 555 0146,DE96724049984426097509,1979-03-27,Neumarkt 3,Cologne,DE,,,4111111111111111,Registered business account. VAT invoice requested.
+1032,Elif Carter,elif.carter@example.net,+1 312 555 0166,GB13GPLQ28725709049316,1987-08-05,500 Michigan Ave,Chicago,US,,601-14-8732,5500005555555559,"Physical therapy after ski injury, twice a week."
+1033,Maria Yilmaz,maria.yilmaz@example.com,+90 322 555 0133,TR547136325841286337933325,1992-02-18,Ataturk Caddesi 63,Adana,TR,10000000832,,4012888888881881,Requested expedited shipping. Prefers contact by phone.
+1034,George Novak,george.novak@example.org,+48 12 555 0177,NL97VYRN0000709764,1974-12-01,Florianska 21,Krakow,PL,,,4012888888881881,Business travel profile. Prefers aisle seats.
+1035,Anna Demir,anna.demir@example.net,+90 232 555 0122,TR964163815472568253393077,1996-10-14,Alsancak Caddesi 3,Izmir,TR,10000000900,,4111 1111 1111 1111,Opted out of analytics cookies. Session data purged.
+1036,John Fischer,john.fischer@example.com,+49 40 555 0133,DE32267278377601938101,1982-05-23,Moenckebergstrasse 17,Hamburg,DE,,,5105105105105100,Family plan includes two dependents. Ages verified.
+1037,Laura Gonzalez,laura.gonzalez@example.org,+34 96 555 0155,FR081169875137VC83953111145,1988-11-07,Calle Colon 30,Valencia,ES,,,5500 0055 5555 5559,"Migraine with aura. Preventive treatment under review."
+1038,Peter Watson,peter.watson@example.net,+44 114 555 0144,GB03VIKU26005661811465,1986-06-20,44 West Street,Sheffield,GB,,123-45-6789,6011 1111 1111 1117,Gift card purchase. No personal notes.
+1039,Emily Schmidt,emily.schmidt@example.com,+49 721 555 0188,DE27341115284355966880,1999-01-26,Kaiserstrasse 89,Karlsruhe,DE,,,4012888888881881,"Peanut allergy noted. Kitchen staff informed."
+1040,Max Demir,max.demir@example.net,+90 242 555 0111,TR073836268790972327186485,1983-04-12,Falez Caddesi 9,Antalya,TR,10000001068,,4111111111111111,"Dialysis patient. Emergency contact on file."

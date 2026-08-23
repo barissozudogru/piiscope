@@ -7,35 +7,43 @@ access control.  To run the API with uvicorn, use
 
 .. code-block:: bash
 
-    uvicorn gdpr_privacy_app.api.main:app --host 0.0.0.0 --port 8000
+    uvicorn api.main:app --host 0.0.0.0 --port 8000
 
 The API exposes OpenAPI documentation at ``/docs`` and ``/redoc``.
 """
+
 from __future__ import annotations
 
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
-from . import models
-from . import database
-from .config import settings
-from .routes import auth_routes, profile_routes, scan_routes, audit_routes, data_source_routes, webhook_routes
+from piiscope import __version__
+
+from . import database, models
+from .exceptions import BasePrivacyException
+from .logging_config import setup_logging
 from .middleware import setup_middleware
-# from .logging_config import setup_logging
-# from .performance import init_redis_cache, init_connection_pool
-# from .exceptions import BasePrivacyException
+from .performance import init_connection_pool, init_redis_cache
+from .routes import (
+    audit_routes,
+    auth_routes,
+    data_source_routes,
+    profile_routes,
+    scan_routes,
+    webhook_routes,
+)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan manager."""
     # Startup
-    # setup_logging()
-    # init_redis_cache()
-    # init_connection_pool()
+    setup_logging()
+    init_redis_cache()
+    init_connection_pool()
 
     # Ensure tables are created on startup.  In production one should use
     # Alembic migrations, but for a self-contained example we call create_all().
@@ -82,23 +90,27 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="GDPR Privacy Risk Detection API", 
-    version="1.0.0",
-    description="API for detecting and managing privacy risks in structured data",
-    lifespan=lifespan
+    title="piiscope API",
+    version=__version__,
+    description="Detect, score and remediate personal data in files and databases.",
+    lifespan=lifespan,
 )
 
+
+@app.get("/health", tags=["health"], include_in_schema=True)
+async def health() -> dict[str, str]:
+    """Liveness probe used by Docker and load balancers."""
+    return {"status": "ok", "version": __version__}
+
+
 # Global exception handler for our custom exceptions
-# @app.exception_handler(BasePrivacyException)
-# async def privacy_exception_handler(request, exc: BasePrivacyException):
-#     return JSONResponse(
-#         status_code=400,
-#         content={
-#             "error": exc.message,
-#             "details": exc.details,
-#             "type": type(exc).__name__
-#         }
-#     )
+@app.exception_handler(BasePrivacyException)
+async def privacy_exception_handler(request, exc: BasePrivacyException):
+    return JSONResponse(
+        status_code=400,
+        content={"error": exc.message, "details": exc.details, "type": type(exc).__name__},
+    )
+
 
 # Set up security and request middleware
 setup_middleware(app)

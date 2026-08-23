@@ -4,17 +4,24 @@ This module provides a convenience function for writing entries to the
 audit log.  All actions that impact sensitive data or configuration
 should call ``log_audit_event`` with the appropriate parameters.
 """
+
 from __future__ import annotations
 
-from typing import Any, Optional
 from datetime import datetime, timezone
+from typing import Any
 
 from sqlalchemy.orm import Session
 
 from . import models
 
 
-def log_audit_event(db: Session, user_id: Optional[int], action: str, target: Optional[str] = None, details: Optional[Any] = None) -> None:
+def log_audit_event(
+    db: Session,
+    user_id: int | None,
+    action: str,
+    target: str | None = None,
+    details: Any | None = None,
+) -> None:  # noqa: E501
     """Record an event in the audit log.
 
     Args:

@@ -12,11 +12,12 @@ Each PatternDefinition optionally carries:
   - pii_category: broad category label used for masking recommendations
     and compliance mapping.
 """
+
 from __future__ import annotations
 
 import logging
 import re
-from typing import Dict, Optional, Pattern
+from re import Pattern
 
 _logger = logging.getLogger(__name__)
 
@@ -57,7 +58,14 @@ class PatternDefinition:
 #     so it no longer masks every uppercase letter + digit sequence.
 # ---------------------------------------------------------------------------
 
-PATTERNS: Dict[str, PatternDefinition] = {
+PATTERNS: dict[str, PatternDefinition] = {
+    "given_name": PatternDefinition(r"(?!x)x", "Given Name", 0.3, pii_category="name"),
+    "surname": PatternDefinition(r"(?!x)x", "Surname", 0.3, pii_category="name"),
+    "medical_condition": PatternDefinition(
+        r"(?!x)x", "Medical Condition", 0.5, pii_category="health"
+    ),
+    "drug_name": PatternDefinition(r"(?!x)x", "Drug Name", 0.5, pii_category="health"),
+    "hospital_name": PatternDefinition(r"(?!x)x", "Hospital Name", 0.4, pii_category="health"),
     # ------------------------------------------------------------------
     # Email addresses
     # ------------------------------------------------------------------
@@ -67,7 +75,6 @@ PATTERNS: Dict[str, PatternDefinition] = {
         0.3,
         pii_category="contact",
     ),
-
     # ------------------------------------------------------------------
     # Credit card numbers
     #
@@ -81,19 +88,18 @@ PATTERNS: Dict[str, PatternDefinition] = {
     # ------------------------------------------------------------------
     "credit_card": PatternDefinition(
         r"\b(?:"
-        r"4[0-9]{3}(?:[ \-]?[0-9]{4}){3}"           # Visa (16 digits)
+        r"4[0-9]{3}(?:[ \-]?[0-9]{4}){3}"  # Visa (16 digits)
         r"|4[0-9]{3}(?:[ \-]?[0-9]{4}){2}[ \-]?[0-9]{3}"  # Visa (13 digits)
-        r"|5[1-5][0-9]{2}(?:[ \-]?[0-9]{4}){3}"     # Mastercard
-        r"|2[2-7][0-9]{2}(?:[ \-]?[0-9]{4}){3}"     # Mastercard 2-series
+        r"|5[1-5][0-9]{2}(?:[ \-]?[0-9]{4}){3}"  # Mastercard
+        r"|2[2-7][0-9]{2}(?:[ \-]?[0-9]{4}){3}"  # Mastercard 2-series
         r"|3[47][0-9]{2}[ \-]?[0-9]{6}[ \-]?[0-9]{5}"  # Amex
-        r"|6(?:011|5[0-9]{2})(?:[ \-]?[0-9]{4}){3}" # Discover
+        r"|6(?:011|5[0-9]{2})(?:[ \-]?[0-9]{4}){3}"  # Discover
         r")\b",
         "Credit card number",
         0.8,
         requires_checksum=True,
         pii_category="financial",
     ),
-
     # ------------------------------------------------------------------
     # IBAN
     # Format: 2-letter country code + 2 check digits + BBAN (11-30 chars)
@@ -106,7 +112,6 @@ PATTERNS: Dict[str, PatternDefinition] = {
         requires_checksum=True,
         pii_category="financial",
     ),
-
     # ------------------------------------------------------------------
     # Turkish TC Kimlik (national identity number)
     # Exactly 11 digits, first digit non-zero.
@@ -119,7 +124,6 @@ PATTERNS: Dict[str, PatternDefinition] = {
         requires_checksum=True,
         pii_category="national_id",
     ),
-
     # ------------------------------------------------------------------
     # German national ID / Passport (Personalausweis)
     # Alphanumeric, 9 chars, restricted character set.
@@ -130,7 +134,6 @@ PATTERNS: Dict[str, PatternDefinition] = {
         0.9,
         pii_category="national_id",
     ),
-
     # ------------------------------------------------------------------
     # Phone numbers
     #
@@ -161,7 +164,6 @@ PATTERNS: Dict[str, PatternDefinition] = {
         0.4,
         pii_category="contact",
     ),
-
     # ------------------------------------------------------------------
     # IP addresses
     #
@@ -189,7 +191,6 @@ PATTERNS: Dict[str, PatternDefinition] = {
         0.4,
         pii_category="network",
     ),
-
     # ------------------------------------------------------------------
     # VAT number (EU format: 2-letter country code + 8-12 digits/uppercase)
     # Compiled case-sensitively so that "DEpression" (lowercase letters
@@ -203,7 +204,6 @@ PATTERNS: Dict[str, PatternDefinition] = {
         pii_category="financial",
         case_sensitive=True,
     ),
-
     # ------------------------------------------------------------------
     # URL (basic - low severity, mostly useful as context clue)
     # ------------------------------------------------------------------
@@ -213,7 +213,6 @@ PATTERNS: Dict[str, PatternDefinition] = {
         0.2,
         pii_category="other",
     ),
-
     # ------------------------------------------------------------------
     # Date of birth or other dates
     # ------------------------------------------------------------------
@@ -223,7 +222,6 @@ PATTERNS: Dict[str, PatternDefinition] = {
         0.2,
         pii_category="demographic",
     ),
-
     # ------------------------------------------------------------------
     # Social Security Number (US SSN)
     # Format: XXX-XX-XXXX; restricted first and second groups.
@@ -234,7 +232,6 @@ PATTERNS: Dict[str, PatternDefinition] = {
         0.9,
         pii_category="national_id",
     ),
-
     # ------------------------------------------------------------------
     # Passport number (generic; matches common formats)
     # ------------------------------------------------------------------
@@ -244,7 +241,6 @@ PATTERNS: Dict[str, PatternDefinition] = {
         0.8,
         pii_category="national_id",
     ),
-
     # ------------------------------------------------------------------
     # Health / medical record identifiers
     # ------------------------------------------------------------------
@@ -254,7 +250,6 @@ PATTERNS: Dict[str, PatternDefinition] = {
         0.9,
         pii_category="health",
     ),
-
     # ------------------------------------------------------------------
     # SWIFT / BIC codes
     # Format: 4-letter bank code + 2-letter country + 2 location + optional 3 branch
@@ -267,9 +262,8 @@ PATTERNS: Dict[str, PatternDefinition] = {
         pii_category="financial",
         case_sensitive=True,
     ),
-
     # ------------------------------------------------------------------
-    # Passport numbers – country-specific patterns
+    # Passport numbers - country-specific patterns
     #
     # Turkish passport: letter T followed by 8 digits (T + 8 digits = 9 chars)
     # German passport: letters + digits, same charset as national_id but
@@ -297,7 +291,6 @@ PATTERNS: Dict[str, PatternDefinition] = {
         pii_category="national_id",
         case_sensitive=True,
     ),
-
     # ------------------------------------------------------------------
     # Turkish IBAN  (TR + 24 digits = 26 chars total)
     # Separate entry so context-aware boosting and the IBAN checksum
@@ -311,9 +304,8 @@ PATTERNS: Dict[str, PatternDefinition] = {
         pii_category="financial",
         case_sensitive=True,
     ),
-
     # ------------------------------------------------------------------
-    # Turkish phone – stricter alternative to tr_phone for context-aware use
+    # Turkish phone - stricter alternative to tr_phone for context-aware use
     # Matches mobile (05xx) and landline (0xxx) formats with international
     # prefix (+90) optional.
     # ------------------------------------------------------------------
@@ -323,9 +315,8 @@ PATTERNS: Dict[str, PatternDefinition] = {
         0.45,
         pii_category="contact",
     ),
-
     # ------------------------------------------------------------------
-    # EU VAT numbers – per-country stricter formats
+    # EU VAT numbers - per-country stricter formats
     # Germany: DE + 9 digits
     # France:  FR + 2 alphanumeric + 9 digits
     # Turkey:  TR VAT: 10 digits (vergi no), no EU country prefix
@@ -353,7 +344,7 @@ def build_custom_patterns(custom_defs: list[dict]) -> dict[str, PatternDefinitio
       - id       (str): unique rule identifier
       - pattern  (str): raw regex string
       - description (str): human-readable description
-      - severity (float): 0.0–1.0 severity weight
+      - severity (float): 0.0-1.0 severity weight
 
     Optional fields:
       - pii_category (str): category label (default "custom")

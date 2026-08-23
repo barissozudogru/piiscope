@@ -1,0 +1,31 @@
+name: False Positive Report
+description: Report a false positive detection by piiscope
+title: "[False Positive]: "
+labels: ["false-positive"]
+body:
+  - type: input
+    id: detector
+    attributes:
+      label: Detector Name
+      description: The name of the detector that triggered the false positive (e.g., email_address, credit_card).
+    validations:
+      required: true
+  - type: input
+    id: jurisdiction
+    attributes:
+      label: Jurisdiction
+      description: The jurisdiction context if applicable (e.g., GDPR, CCPA, KVKK, LGPD).
+  - type: textarea
+    id: example
+    attributes:
+      label: Redacted Example
+      description: Provide a redacted or synthetic example that triggered the false positive. DO NOT include real personal data.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: Explain why this should not be detected as PII.
+    validations:
+      required: true

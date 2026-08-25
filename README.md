@@ -1,5 +1,5 @@
 # piiscope
-Find, score and remediate personal data in your files and databases.
+piiscope finds personal data in your datasets and measures privacy risks across global jurisdictions. It scans tabular data or free text to locate direct identifiers and calculates k-anonymity, l-diversity and t-closeness on quasi-identifiers. It helps you remediate findings by applying strategies like hashing, generalisation or tokenisation directly to the target columns.
 
 [![CI](https://github.com/barissozudogru/piiscope/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/barissozudogru/piiscope/actions/workflows/ci.yml)
 ![PyPI Version](https://img.shields.io/pypi/v/piiscope)
@@ -8,23 +8,8 @@ Find, score and remediate personal data in your files and databases.
 
 ![piiscope demo](https://raw.githubusercontent.com/barissozudogru/piiscope/main/docs/assets/demo.gif)
 
-## What it does
-piiscope finds personal data in your datasets and measures privacy risks across global jurisdictions. It scans tabular data or free text to locate direct identifiers and calculate k-anonymity, l-diversity and t-closeness on quasi-identifiers. It helps you remediate findings by applying strategies like hashing, generalisation or tokenisation directly to the target columns.
+Install with `pip install piiscope`. Add Parquet support with `pip install "piiscope[parquet]"`, or spaCy NLP models with `pip install "piiscope[nlp]"`.
 
-## Install
-```bash
-pip install piiscope
-```
-For reading Parquet files:
-```bash
-pip install "piiscope[parquet]"
-```
-For spaCy-based natural language processing:
-```bash
-pip install "piiscope[nlp]"
-```
-
-## Quickstart
 Scan a file to identify privacy risks:
 ```bash
 piiscope scan samples/customers.csv

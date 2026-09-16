@@ -231,7 +231,7 @@ def _print_table(console: Console, result: ScanResult) -> None:
     console.print()
 
 
-def _findings_csv(result: ScanResult) -> str:
+def _emit_csv(results: Sequence[ScanResult]) -> str:
     buffer = _io.StringIO()
     writer = csv.writer(buffer, lineterminator="\n")
     writer.writerow(
@@ -249,22 +249,23 @@ def _findings_csv(result: ScanResult) -> str:
             "risk_level",
         ]
     )
-    for f in result.findings:
-        writer.writerow(
-            [
-                result.source,
-                f.file or "",
-                f.column,
-                f.category,
-                f.detector,
-                f.count,
-                f.confidence,
-                f.severity,
-                " ".join(f.jurisdictions),
-                result.risk.score,
-                result.risk.level,
-            ]
-        )
+    for r in results:
+        for f in r.findings:
+            writer.writerow(
+                [
+                    r.source,
+                    f.file or "",
+                    f.column,
+                    f.category,
+                    f.detector,
+                    f.count,
+                    f.confidence,
+                    f.severity,
+                    " ".join(f.jurisdictions),
+                    r.risk.score,
+                    r.risk.level,
+                ]
+            )
     return buffer.getvalue().rstrip("\n")
 
 
@@ -285,7 +286,7 @@ def _emit(
     elif fmt == OutputFormat.markdown:
         text = "\n\n---\n\n".join(render_markdown(r) for r in results)
     elif fmt == OutputFormat.csv:
-        text = "\n".join(_findings_csv(r) for r in results)
+        text = _emit_csv(results)
     elif fmt == OutputFormat.sarif:
         text = render_sarif(results)
     else:

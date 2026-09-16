@@ -40,6 +40,28 @@ class TestVersionAndHelp:
 
 
 class TestScanFormats:
+    def test_directory_scan(self, tmp_path):
+        d = tmp_path / "data"
+        d.mkdir()
+        (d / "a.csv").write_text("email\na@example.com\n")
+        (d / "b.csv").write_text("phone\n+1-555-555-5555\n")
+        result = _invoke("scan", str(d), "--format", "json")
+        assert result.exit_code == 0
+        payload = json.loads(result.output)
+        assert "files" in payload
+        assert len(payload["files"]) == 2
+
+    def test_directory_scan_csv_no_repeated_header(self, tmp_path):
+        d = tmp_path / "data"
+        d.mkdir()
+        (d / "a.csv").write_text("email\na@example.com\n")
+        (d / "b.csv").write_text("phone\n+1-555-555-5555\n")
+        result = _invoke("scan", str(d), "--format", "csv")
+        assert result.exit_code == 0
+        lines = result.output.strip().splitlines()
+        headers = [line for line in lines if line.startswith("source,file")]
+        assert len(headers) == 1, "CSV header should only appear once"
+
     def test_table_output(self):
         result = _invoke("scan", str(SAMPLES / "medical_notes.csv"))
         assert result.exit_code == 0

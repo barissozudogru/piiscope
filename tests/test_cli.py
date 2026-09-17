@@ -268,6 +268,14 @@ class TestRemediateCommand:
         _invoke("remediate", str(source), "--out", str(out), "--strategy", "hash")
         assert source.read_text() == "email\nsomeone@example.com\n"
 
+    def test_empty_txt_remediate(self, tmp_path):
+        source = tmp_path / "empty.txt"
+        source.write_text("")
+        out = tmp_path / "safe.txt"
+        result = _invoke("remediate", str(source), "--out", str(out), "--strategy", "hash")
+        assert result.exit_code == 0
+        assert out.read_text() == ""
+
 
 class TestErrorPaths:
     def test_missing_file(self):

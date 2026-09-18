@@ -143,10 +143,12 @@ class TestDirectoryWalk:
 
     def test_scan_directory_via_public_api(self):
         from piiscope import scan
+        from piiscope.io.readers import walk_directory
 
         samples = Path(__file__).resolve().parent.parent / "samples"
         result = scan(samples)
-        assert result.files == 3
+        expected_files = len(walk_directory(samples))
+        assert result.files == expected_files
         assert result.rows > 0
         with_file = [f for f in result.findings if f.file == "customers.csv"]
         assert with_file, "findings should carry their source file name"

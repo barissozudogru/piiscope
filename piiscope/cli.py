@@ -97,6 +97,40 @@ def _split_csv(value: str | None) -> list[str] | None:
     return parts or None
 
 
+_SUPPORTED_DICTIONARY_KEYS = (
+    "given_name",
+    "surname",
+    "hospital_keyword",
+    "drug_name",
+    "medical_condition",
+)
+
+
+def _parse_dictionaries(values: Sequence[str] | None) -> dict[str, str] | None:
+    if not values:
+        return None
+    parsed: dict[str, str] = {}
+    for item in values:
+        if "=" not in item:
+            raise PiiscopeError(
+                f"invalid dictionary '{item}'; expected KEY=FILE format "
+                "(e.g. given_name=names.txt)"
+            )
+        key, path = item.split("=", 1)
+        key = key.strip()
+        path = path.strip()
+        if not key or not path:
+            raise PiiscopeError(
+                f"invalid dictionary '{item}'; expected KEY=FILE format "
+                "(e.g. given_name=names.txt)"
+            )
+        if key not in _SUPPORTED_DICTIONARY_KEYS:
+            keys_str = ", ".join(_SUPPORTED_DICTIONARY_KEYS)
+            raise PiiscopeError(f"unknown dictionary key '{key}'; choose from {keys_str}")
+        parsed[key] = path
+    return parsed
+
+
 def _severity_style(severity: float) -> str:
     for threshold, style in _SEVERITY_STYLES:
         if severity >= threshold:
@@ -377,6 +411,7 @@ def scan_cmd(
     console = Console(quiet=quiet)
     jurisdictions = _jurisdiction_values(jurisdiction)
     qi = _split_csv(quasi_identifiers)
+    custom_dicts = _parse_dictionaries(dictionary)
 
     from piiscope.io.readers import walk_directory
 
@@ -391,6 +426,7 @@ def scan_cmd(
                     sample_rows=sample,
                     include_metrics=not no_metrics,
                     min_coverage=0.0 if show_all else 0.15,
+                    dictionaries=custom_dicts,
                 )
                 for f in files
             ]
@@ -450,6 +486,7 @@ def scan_cmd(
                 sample_rows=sample,
                 include_metrics=not no_metrics,
                 min_coverage=0.0 if show_all else 0.15,
+                dictionaries=custom_dicts,
             )
             _emit(console, [res], format, output)
             if fail_on is not None and RANK[res.risk.level] >= RANK[fail_on.value]:

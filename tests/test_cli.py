@@ -347,3 +347,63 @@ class TestPatternsAndDoctor:
         assert result.exit_code == 0
         assert "pandas" in result.output
         assert "pyarrow" in result.output
+
+
+class TestCustomDictionary:
+    def test_scan_with_custom_dictionary(self, tmp_path):
+        data = tmp_path / "data.csv"
+        data.write_text("name\nCustomUniquePerson\n")
+        dict_file = tmp_path / "names.txt"
+        dict_file.write_text("CustomUniquePerson\n")
+
+        baseline = _invoke("scan", str(data), "--format", "json")
+        assert baseline.exit_code == 0
+        assert json.loads(baseline.output)["findings"] == []
+
+        result = _invoke(
+            "scan",
+            str(data),
+            "--format",
+            "json",
+            "--dictionary",
+            f"given_name={dict_file}",
+        )
+        assert result.exit_code == 0
+        payload = json.loads(result.output)
+        detectors = [f["detector"] for f in payload["findings"]]
+        assert "given_name" in detectors
+
+    def test_scan_directory_with_custom_dictionary(self, tmp_path):
+        d = tmp_path / "scan_dir"
+        d.mkdir()
+        (d / "a.csv").write_text("name\nCustomUniquePerson\n")
+        dict_file = tmp_path / "names.txt"
+        dict_file.write_text("CustomUniquePerson\n")
+
+        result = _invoke(
+            "scan",
+            str(d),
+            "--format",
+            "json",
+            "--dictionary",
+            f"given_name={dict_file}",
+        )
+        assert result.exit_code == 0
+        payload = json.loads(result.output)
+        assert len(payload["files"]) == 1
+        detectors = [f["detector"] for f in payload["files"][0]["findings"]]
+        assert "given_name" in detectors
+
+    def test_scan_invalid_dictionary_format(self, tmp_path):
+        data = tmp_path / "data.csv"
+        data.write_text("name\nCustomUniquePerson\n")
+        result = _invoke("scan", str(data), "--dictionary", "invalid_format")
+        assert result.exit_code != 0
+
+    def test_scan_unknown_dictionary_key(self, tmp_path):
+        data = tmp_path / "data.csv"
+        data.write_text("name\nCustomUniquePerson\n")
+        dict_file = tmp_path / "names.txt"
+        dict_file.write_text("CustomUniquePerson\n")
+        result = _invoke("scan", str(data), "--dictionary", f"unknown_key={dict_file}")
+        assert result.exit_code != 0

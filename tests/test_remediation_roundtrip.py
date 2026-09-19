@@ -139,3 +139,26 @@ def test_remediated_output_matches_extension(tmp_path):
     lines = out.read_text().strip().splitlines()
     assert len(lines) == 2
     assert '"email"' in lines[0]
+
+
+def test_remediate_json_with_null_values(tmp_path):
+    source = tmp_path / "in.json"
+    source.write_text('[{"email": "test@example.com"}, {"email": null}]')
+    out = tmp_path / "out.json"
+    result = remediate(source, out, strategy="hash", columns=["email"])
+    assert result.columns_changed == {"email": 1}
+    frame = pd.read_json(out)
+    assert frame["email"].iloc[0] != ""
+    assert frame["email"].iloc[1] == ""
+
+
+def test_remediate_parquet_with_null_values(tmp_path):
+    pytest.importorskip("pyarrow")
+    source = tmp_path / "in.parquet"
+    pd.DataFrame({"email": ["test@example.com", None]}).to_parquet(source)
+    out = tmp_path / "out.parquet"
+    result = remediate(source, out, strategy="hash", columns=["email"])
+    assert result.columns_changed == {"email": 1}
+    frame = pd.read_parquet(out)
+    assert frame["email"].iloc[0] != ""
+    assert frame["email"].iloc[1] == ""

@@ -103,6 +103,22 @@ class TestJsonReading:
         frame = read_dataframe(path)
         assert len(frame) == 0
 
+    def test_json_null_values_are_empty_strings(self, tmp_path):
+        path = tmp_path / "nulls.json"
+        path.write_text('[{"a": 1, "b": null}, {"a": null, "b": 2}]')
+        frame = read_dataframe(path)
+        assert frame["b"].iloc[0] == ""
+        assert frame["a"].iloc[1] == ""
+
+    def test_jsonl_null_values_are_empty_strings(self, tmp_path):
+        path = tmp_path / "nulls.jsonl"
+        path.write_text('{"a": 1}\n{"b": 2}\n{"a": null, "b": null}\n')
+        frame = read_dataframe(path)
+        assert frame["b"].iloc[0] == ""
+        assert frame["a"].iloc[1] == ""
+        assert frame["a"].iloc[2] == ""
+        assert frame["b"].iloc[2] == ""
+
 
 class TestTextReading:
     def test_lines_become_text_column(self, tmp_path):
@@ -129,6 +145,14 @@ class TestParquetReading:
         assert path.read_bytes()[:4] == b"PAR1"
         frame = read_dataframe(path)
         assert len(frame) == 1
+
+    def test_parquet_null_values_are_empty_strings(self, tmp_path):
+        pytest.importorskip("pyarrow")
+        path = tmp_path / "nulls.parquet"
+        pd.DataFrame({"a": ["hello", None], "b": [1.5, None]}).to_parquet(path)
+        frame = read_dataframe(path)
+        assert frame["a"].iloc[1] == ""
+        assert frame["b"].iloc[1] == ""
 
 
 class TestDirectoryWalk:

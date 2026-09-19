@@ -69,7 +69,7 @@ def _check_readable(path: Path, max_file_size_mb: float | None) -> None:
 def _batches(records: list[dict], chunk_size: int) -> Iterator[pd.DataFrame]:
     """Slice a record list into DataFrames of at most chunk_size rows."""
     for start in range(0, len(records), chunk_size):
-        yield pd.DataFrame(records[start : start + chunk_size], dtype=str)
+        yield pd.DataFrame(records[start : start + chunk_size], dtype=str).fillna("")
 
 
 def _iter_csv(
@@ -148,7 +148,7 @@ def _iter_parquet(path: Path, batch_size: int) -> Iterator[pd.DataFrame]:
     try:
         parquet_file = pq.ParquetFile(path)
         for batch in parquet_file.iter_batches(batch_size=batch_size):
-            yield batch.to_pandas().astype(str)
+            yield batch.to_pandas().fillna("").astype(str)
     except Exception as exc:
         raise FileReadError(f"malformed parquet file {path}: {exc}") from exc
 
@@ -231,4 +231,4 @@ def read_dataframe(
     )
     if not frames:
         return pd.DataFrame()
-    return pd.concat(frames, ignore_index=True)
+    return pd.concat(frames, ignore_index=True).fillna("")

@@ -66,6 +66,8 @@ def compute_l_diversity(
     available = [c for c in quasi_identifiers if c in df.columns]
     if not available:
         return None
+    if df[sensitive_attr].dropna().empty:
+        return None
     l_values = df.groupby(available)[sensitive_attr].nunique(dropna=True)
     if l_values.empty:
         return None
@@ -95,6 +97,13 @@ def compute_t_closeness(
         return None
 
     overall_dist = df[sensitive_attr].value_counts(normalize=True).to_dict()
+    if not overall_dist:
+        return None
+
+    group_sizes = df.groupby(available).size()
+    if group_sizes.empty:
+        return None
+
     max_tv = 0.0
     for _, group in df.groupby(available):
         class_dist = group[sensitive_attr].value_counts(normalize=True)
@@ -148,6 +157,16 @@ def compute_reidentification_risk(
         }
 
     group_sizes = df.groupby(available).size()
+    if group_sizes.empty:
+        return {
+            "prosecutor_risk": None,
+            "journalist_risk": None,
+            "marketer_risk": None,
+            "risk_level": "unknown",
+            "unique_records": None,
+            "equivalence_classes": None,
+        }
+
     n_total = len(df)
     n_classes = len(group_sizes)
     min_size = int(group_sizes.min())

@@ -57,6 +57,11 @@ _SENSITIVITY: dict[str, float] = {
     "passport_uk": 0.9,
     # Turkish IBAN
     "iban_tr": 0.8,
+    # Country-specific VAT
+    "vat_de": 0.6,
+    "vat_tr": 0.15,
+    # Turkish phone (strict)
+    "tr_phone_strict": 0.45,
 }
 
 # Default sensitivity for unknown rule IDs

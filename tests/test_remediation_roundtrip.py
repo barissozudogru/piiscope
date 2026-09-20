@@ -162,3 +162,13 @@ def test_remediate_parquet_with_null_values(tmp_path):
     frame = pd.read_parquet(out)
     assert frame["email"].iloc[0] != ""
     assert frame["email"].iloc[1] == ""
+
+
+def test_generalise_handles_nan_and_non_finite_values():
+    frame = pd.DataFrame({"age": ["25", "nan", "inf", ""]})
+    changed, _ = apply_strategy(frame, strategy="generalise", columns=["age"], bucket_size=10)
+    assert changed["age"] == 3
+    assert frame["age"].iloc[0] == "20-29"
+    assert frame["age"].iloc[1] == "n*n"
+    assert frame["age"].iloc[2] == "i*f"
+    assert frame["age"].iloc[3] == ""

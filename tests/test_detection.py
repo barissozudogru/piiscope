@@ -193,6 +193,16 @@ class TestColumnNameContext:
         mult = column_name_context_boost("phone_number", "eu_phone")
         assert mult > 1.0
 
+    def test_tr_phone_in_turkish_context_boosts(self):
+        assert column_name_context_boost("gsm", "tr_phone") == 1.5
+        assert column_name_context_boost("cep", "tr_phone") == 1.5
+        assert column_name_context_boost("cep_telefonu", "tr_phone") == 1.5
+        assert column_name_context_boost("gsm_no", "tr_phone") == 1.5
+        assert column_name_context_boost("phone_number", "tr_phone") == 1.5
+        assert column_name_context_boost("gsm", "tr_phone_strict") == 1.5
+        assert column_name_context_boost("cep", "tr_phone_strict") == 1.5
+        assert column_name_context_boost("unrelated_col", "tr_phone") == 1.0
+
     def test_neutral_column_returns_one(self):
         mult = column_name_context_boost("data", "email")
         assert mult == 1.0
@@ -360,6 +370,12 @@ class TestDetectionEngine:
         findings = self.engine.detect_cell("10000000147", "tc_no")
         rule_ids = [f.rule_id for f in findings]
         assert "tc_kimlik" not in rule_ids
+
+    def test_tr_phone_boosted_in_turkish_column(self):
+        findings = self.engine.detect_cell("+90 532 123 4567", "gsm_no")
+        tr_findings = [f for f in findings if f.rule_id == "tr_phone"]
+        assert len(tr_findings) > 0
+        assert tr_findings[0].confidence == 1.0
 
     def test_suppression_rule_removes_finding(self):
         engine_with_suppression = DetectionEngine(

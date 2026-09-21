@@ -21,6 +21,7 @@ from piiscope.detection.validators import (
     tc_kimlik_check,
 )
 from piiscope.metrics.metrics import (
+    _MASKING_RECOMMENDATIONS,
     compute_k_anonymity,
     compute_l_diversity,
     compute_reidentification_risk,
@@ -546,6 +547,20 @@ class TestMaskingRecommendations:
         # Unknown categories fall back to "other" recommendations
         assert len(recs) > 0
 
+    def test_every_pattern_category_has_recommendation(self):
+        categories = {p.pii_category for p in PATTERNS.values()}
+        missing = categories - set(_MASKING_RECOMMENDATIONS.keys())
+        assert not missing, f"Categories missing from _MASKING_RECOMMENDATIONS: {missing}"
+
+    def test_name_category_recommendation(self):
+        recs = get_masking_recommendations({"name"})
+        assert "name" in recs
+        assert recs["name"]["primary"] == "redact"
+        assert "hash" in recs["name"]["alternatives"]
+        assert "tokenize" in recs["name"]["alternatives"]
+        assert recs["name"]["retention_days"] == 180
+        assert recs["name"]["ccpa_section"] is not None
+
 
 # ============================================================================
 # Privacy Impact Assessment tests
@@ -660,3 +675,20 @@ class TestPIA:
             reidentification_risk=None,
         )
         assert pia["jurisdiction_applicability"]["PCI_DSS"] is True
+
+    def test_pia_with_name_category(self):
+        pia = generate_privacy_impact_assessment(
+            findings_summary={
+                "total_findings": 10,
+                "pii_categories": ["name"],
+                "highest_severity": 0.3,
+                "rules_triggered": ["given_name", "surname"],
+            },
+            k_anonymity=None,
+            l_diversity=None,
+            t_closeness=None,
+            reidentification_risk=None,
+        )
+        assert "name" in pia["masking_recommendations"]
+        assert pia["masking_recommendations"]["name"]["primary"] == "redact"
+        assert pia["retention_recommendations_days"]["name"] == 180

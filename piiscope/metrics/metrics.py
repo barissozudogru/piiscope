@@ -326,6 +326,16 @@ _MASKING_RECOMMENDATIONS: dict[str, dict[str, Any]] = {
         "kvkk_article": "Article 4",
         "ccpa_section": None,
     },
+    "name": {
+        "primary": "redact",
+        "alternatives": ["hash", "tokenize"],
+        "retention_days": 180,
+        "rationale": "Personal names directly identify individuals; "
+        "redact or pseudonymise to prevent identification.",
+        "gdpr_article": "Article 4(1), Article 5(1)(e)",
+        "kvkk_article": "Article 3, Article 4",
+        "ccpa_section": "Section 1798.140(v)(1)(A)",
+    },
     "network": {
         "primary": "hash",
         "alternatives": ["redact", "generalize"],

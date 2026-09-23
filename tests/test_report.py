@@ -1,7 +1,9 @@
 import json
-from piiscope.scan import ScanResult, Finding, RiskScore, MetricsResult
+
 from piiscope.report.renderers import render_markdown
 from piiscope.report.sarif import render_sarif
+from piiscope.scan import Finding, MetricsResult, RiskScore, ScanResult
+
 
 def test_render_markdown_empty_findings():
     result = ScanResult(

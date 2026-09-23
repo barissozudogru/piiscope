@@ -444,3 +444,50 @@ class TestCustomDictionary:
         dict_file.write_text("CustomUniquePerson\n")
         result = _invoke("scan", str(data), "--dictionary", f"unknown_key={dict_file}")
         assert result.exit_code != 0
+
+
+class TestReportCommand:
+    def test_report_html(self, tmp_path):
+        out = tmp_path / "report.html"
+        result = _invoke("report", str(SAMPLES / "medical_notes.csv"), "--out", str(out))
+        assert result.exit_code == 0
+        assert out.exists()
+        assert "<!DOCTYPE html>" in out.read_text()
+        assert "Report written to" in result.output
+
+    def test_report_sarif(self, tmp_path):
+        out = tmp_path / "report.sarif"
+        result = _invoke("report", str(SAMPLES / "medical_notes.csv"), "--out", str(out))
+        assert result.exit_code == 0
+        assert out.exists()
+        payload = json.loads(out.read_text())
+        assert payload["version"] == "2.1.0"
+        assert len(payload["runs"][0]["results"]) > 0
+
+    def test_report_json(self, tmp_path):
+        out = tmp_path / "report.json"
+        result = _invoke("report", str(SAMPLES / "medical_notes.csv"), "--out", str(out))
+        assert result.exit_code == 0
+        assert out.exists()
+        payload = json.loads(out.read_text())
+        assert payload["rows"] == 4
+
+    def test_report_markdown(self, tmp_path):
+        out = tmp_path / "report.md"
+        result = _invoke("report", str(SAMPLES / "medical_notes.csv"), "--out", str(out))
+        assert result.exit_code == 0
+        assert out.exists()
+        assert "piiscope report" in out.read_text()
+
+    def test_report_quiet(self, tmp_path):
+        out = tmp_path / "report.html"
+        result = _invoke("report", str(SAMPLES / "medical_notes.csv"), "--out", str(out), "--quiet")
+        assert result.exit_code == 0
+        assert out.exists()
+        assert result.output == ""
+
+    def test_report_invalid_extension(self, tmp_path):
+        out = tmp_path / "report.xyz"
+        result = _invoke("report", str(SAMPLES / "medical_notes.csv"), "--out", str(out))
+        assert result.exit_code != 0
+

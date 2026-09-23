@@ -1,4 +1,4 @@
-"""Render a ScanResult as markdown, json or html."""
+"""Render a ScanResult as markdown, json, html or sarif."""
 
 from __future__ import annotations
 
@@ -177,17 +177,24 @@ ul {{ margin-top: .4rem; }}
 </html>"""
 
 
-def write_report(result: ScanResult, out: Path) -> str:
-    """Write a report file; the extension (.json, .md, .html) picks the format."""
-    suffix = out.suffix.lower()
+def write_report(result: ScanResult, out: Path | str) -> str:
+    """Write a report file; the extension (.json, .md, .html, .sarif) picks the format."""
+    out_path = Path(out)
+    suffix = out_path.suffix.lower()
     if suffix == ".json":
         content = render_json(result)
     elif suffix in (".md", ".markdown", ".txt"):
         content = render_markdown(result)
     elif suffix in (".html", ".htm"):
         content = render_html(result)
+    elif suffix == ".sarif":
+        from piiscope.report.sarif import render_sarif
+
+        content = render_sarif([result])
     else:
-        raise PiiscopeError(f"cannot write report to {out}; use a .json, .md or .html extension")
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(content + "\n", encoding="utf-8")
+        raise PiiscopeError(
+            f"cannot write report to {out}; use a .json, .md, .html or .sarif extension"
+        )
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(content + "\n", encoding="utf-8")
     return content

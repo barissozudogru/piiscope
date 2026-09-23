@@ -1,6 +1,10 @@
 import json
+from pathlib import Path
 
-from piiscope.report.renderers import render_markdown
+import pytest
+
+from piiscope.errors import PiiscopeError
+from piiscope.report.renderers import render_html, render_json, render_markdown, write_report
 from piiscope.report.sarif import render_sarif
 from piiscope.scan import Finding, MetricsResult, RiskScore, ScanResult
 
@@ -97,4 +101,124 @@ def test_render_sarif_with_findings():
     sarif = json.loads(sarif_str)
     assert len(sarif["runs"][0]["results"]) == 1
     assert sarif["runs"][0]["results"][0]["ruleId"] == "email"
+
+
+def test_render_json():
+    result = ScanResult(
+        source="test.csv",
+        rows=10,
+        columns=2,
+        findings=[],
+        jurisdictions=["gdpr"],
+        scan_time=0.1,
+        metrics=None,
+        risk=RiskScore(score=0.0, level="low", drivers=[]),
+    )
+    data = json.loads(render_json(result))
+    assert data["source"] == "test.csv"
+    assert data["rows"] == 10
+    assert data["findings"] == []
+
+
+def test_render_html():
+    result = ScanResult(
+        source="data.csv",
+        rows=50,
+        columns=3,
+        findings=[
+            Finding(
+                column="email",
+                category="contact",
+                detector="email",
+                count=5,
+                confidence=0.95,
+                severity=0.5,
+                samples_redacted=["u***@x.com"],
+                jurisdictions=["gdpr"],
+            )
+        ],
+        jurisdictions=["gdpr"],
+        scan_time=0.25,
+        metrics=None,
+        risk=RiskScore(score=25.0, level="medium", drivers=["email"]),
+    )
+    html_text = render_html(result)
+    assert "<!DOCTYPE html>" in html_text
+    assert "data.csv" in html_text
+    assert "email" in html_text
+    assert "medium" in html_text
+
+
+def test_write_report_with_path_and_str(tmp_path):
+    result = ScanResult(
+        source="data.csv",
+        rows=10,
+        columns=2,
+        findings=[],
+        jurisdictions=["gdpr"],
+        scan_time=0.1,
+        metrics=None,
+        risk=RiskScore(score=0.0, level="low", drivers=[]),
+    )
+    # Using Path object
+    out_md = tmp_path / "report.md"
+    write_report(result, out_md)
+    assert out_md.exists()
+    assert "piiscope report" in out_md.read_text()
+
+    # Using str path
+    out_html = str(tmp_path / "report.html")
+    write_report(result, out_html)
+    assert Path(out_html).exists()
+    assert "<!DOCTYPE html>" in Path(out_html).read_text()
+
+    out_json = str(tmp_path / "report.json")
+    write_report(result, out_json)
+    assert Path(out_json).exists()
+    assert json.loads(Path(out_json).read_text())["source"] == "data.csv"
+
+
+def test_write_report_sarif(tmp_path):
+    result = ScanResult(
+        source="data.csv",
+        rows=10,
+        columns=2,
+        findings=[
+            Finding(
+                column="email",
+                category="contact",
+                detector="email",
+                count=2,
+                confidence=0.9,
+                severity=0.5,
+                samples_redacted=["e***@example.com"],
+                jurisdictions=["gdpr"],
+            )
+        ],
+        jurisdictions=["gdpr"],
+        scan_time=0.1,
+        metrics=None,
+        risk=RiskScore(score=30.0, level="medium", drivers=["email"]),
+    )
+    out_sarif = tmp_path / "report.sarif"
+    write_report(result, out_sarif)
+    assert out_sarif.exists()
+    payload = json.loads(out_sarif.read_text())
+    assert payload["version"] == "2.1.0"
+    assert len(payload["runs"][0]["results"]) == 1
+
+
+def test_write_report_unsupported_extension(tmp_path):
+    result = ScanResult(
+        source="test.csv",
+        rows=10,
+        columns=2,
+        findings=[],
+        jurisdictions=["gdpr"],
+        scan_time=0.1,
+        metrics=None,
+        risk=RiskScore(score=0.0, level="low", drivers=[]),
+    )
+    with pytest.raises(PiiscopeError, match="use a .json, .md, .html or .sarif extension"):
+        write_report(result, tmp_path / "report.xyz")
 

@@ -548,7 +548,7 @@ def remediate_cmd(
 @app.command(name="report", epilog="Example: piiscope report data.csv --out scan.html")
 def report_cmd(
     path: Path = typer.Argument(..., help="File or directory to report on."),
-    out: Path = typer.Option(..., "--out", help="Report file: .html, .md or .json."),
+    out: Path = typer.Option(..., "--out", help="Report file: .html, .md, .json or .sarif."),
     jurisdiction: list[JurisdictionOpt] = typer.Option(
         ["gdpr", "ccpa", "kvkk", "lgpd"],
         "--jurisdiction",

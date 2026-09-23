@@ -422,9 +422,11 @@ def scan(
     """
     start = time.perf_counter()
     resolved_jurisdictions = _resolve_jurisdictions(jurisdictions)
-    resolved_profile = _resolve_profile(profile)
+    resolved_profile = dict(_resolve_profile(profile))
     if dictionaries:
-        resolved_profile["user_dictionaries"] = dictionaries
+        user_dicts = dict(resolved_profile.get("user_dictionaries", {}))
+        user_dicts.update(dictionaries)
+        resolved_profile["user_dictionaries"] = user_dicts
     engine = DetectionEngine(resolved_profile)
     aggregate = _Aggregate(engine, resolved_jurisdictions)
     keep_for_metrics = include_metrics or quasi_identifiers is not None

@@ -21,6 +21,7 @@ from piiscope.detection.validators import (
     tc_kimlik_check,
 )
 from piiscope.metrics.metrics import (
+    _MASKING_RECOMMENDATIONS,
     compute_k_anonymity,
     compute_l_diversity,
     compute_reidentification_risk,
@@ -193,6 +194,16 @@ class TestColumnNameContext:
         mult = column_name_context_boost("phone_number", "eu_phone")
         assert mult > 1.0
 
+    def test_tr_phone_in_turkish_context_boosts(self):
+        assert column_name_context_boost("gsm", "tr_phone") == 1.5
+        assert column_name_context_boost("cep", "tr_phone") == 1.5
+        assert column_name_context_boost("cep_telefonu", "tr_phone") == 1.5
+        assert column_name_context_boost("gsm_no", "tr_phone") == 1.5
+        assert column_name_context_boost("phone_number", "tr_phone") == 1.5
+        assert column_name_context_boost("gsm", "tr_phone_strict") == 1.5
+        assert column_name_context_boost("cep", "tr_phone_strict") == 1.5
+        assert column_name_context_boost("unrelated_col", "tr_phone") == 1.0
+
     def test_neutral_column_returns_one(self):
         mult = column_name_context_boost("data", "email")
         assert mult == 1.0
@@ -360,6 +371,12 @@ class TestDetectionEngine:
         findings = self.engine.detect_cell("10000000147", "tc_no")
         rule_ids = [f.rule_id for f in findings]
         assert "tc_kimlik" not in rule_ids
+
+    def test_tr_phone_boosted_in_turkish_column(self):
+        findings = self.engine.detect_cell("+90 532 123 4567", "gsm_no")
+        tr_findings = [f for f in findings if f.rule_id == "tr_phone"]
+        assert len(tr_findings) > 0
+        assert tr_findings[0].confidence == 1.0
 
     def test_suppression_rule_removes_finding(self):
         engine_with_suppression = DetectionEngine(
@@ -546,6 +563,20 @@ class TestMaskingRecommendations:
         # Unknown categories fall back to "other" recommendations
         assert len(recs) > 0
 
+    def test_every_pattern_category_has_recommendation(self):
+        categories = {p.pii_category for p in PATTERNS.values()}
+        missing = categories - set(_MASKING_RECOMMENDATIONS.keys())
+        assert not missing, f"Categories missing from _MASKING_RECOMMENDATIONS: {missing}"
+
+    def test_name_category_recommendation(self):
+        recs = get_masking_recommendations({"name"})
+        assert "name" in recs
+        assert recs["name"]["primary"] == "redact"
+        assert "hash" in recs["name"]["alternatives"]
+        assert "tokenize" in recs["name"]["alternatives"]
+        assert recs["name"]["retention_days"] == 180
+        assert recs["name"]["ccpa_section"] is not None
+
 
 # ============================================================================
 # Privacy Impact Assessment tests
@@ -660,3 +691,20 @@ class TestPIA:
             reidentification_risk=None,
         )
         assert pia["jurisdiction_applicability"]["PCI_DSS"] is True
+
+    def test_pia_with_name_category(self):
+        pia = generate_privacy_impact_assessment(
+            findings_summary={
+                "total_findings": 10,
+                "pii_categories": ["name"],
+                "highest_severity": 0.3,
+                "rules_triggered": ["given_name", "surname"],
+            },
+            k_anonymity=None,
+            l_diversity=None,
+            t_closeness=None,
+            reidentification_risk=None,
+        )
+        assert "name" in pia["masking_recommendations"]
+        assert pia["masking_recommendations"]["name"]["primary"] == "redact"
+        assert pia["retention_recommendations_days"]["name"] == 180

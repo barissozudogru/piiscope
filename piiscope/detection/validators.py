@@ -343,7 +343,12 @@ def column_name_context_boost(column_name: str, rule_id: str) -> float:
                 return 1.5
         return 1.0
 
-    if rule_id in ("eu_phone", "phone", "us_phone", "tr_phone"):
+    if rule_id in ("tr_phone_strict", "tr_phone"):
+        if any(word in col_clean for word in ("phone", "tel", "mobile", "fax", "gsm", "cep")):
+            return 1.5
+        return 1.0
+
+    if rule_id in ("eu_phone", "phone", "us_phone"):
         if any(word in col_clean for word in ("phone", "tel", "mobile", "fax")):
             return 1.5
         return 1.0
@@ -384,9 +389,5 @@ def column_name_context_boost(column_name: str, rule_id: str) -> float:
             return 1.5
         return 1.0
 
-    if rule_id in ("tr_phone_strict", "tr_phone"):
-        if "phone" in col_clean or "tel" in col_clean or "gsm" in col_clean or "cep" in col_clean:
-            return 1.5
-        return 1.0
 
     return 1.0

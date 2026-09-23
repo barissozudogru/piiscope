@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import math
 from datetime import timedelta
 from typing import Any
 
@@ -30,9 +31,12 @@ def partial_redact(value: str, left: int = 1, right: int = 1, mask_char: str = "
     mask characters.
     """
     s = str(value)
+    left = max(0, left)
+    right = max(0, right)
     if len(s) <= left + right:
         return mask_char * len(s)
-    return s[:left] + (mask_char * (len(s) - left - right)) + s[-right:]
+    right_part = s[-right:] if right > 0 else ""
+    return s[:left] + (mask_char * (len(s) - left - right)) + right_part
 
 
 def generalize_numeric(value: Any, bucket_size: int) -> str | None:
@@ -40,13 +44,17 @@ def generalize_numeric(value: Any, bucket_size: int) -> str | None:
 
     Example: generalize_numeric(27, 10) -> "20-29".
     """
+    if bucket_size <= 0:
+        return None
     try:
         num = float(value)
-    except (ValueError, TypeError):
+        if not math.isfinite(num):
+            return None
+        lower = int(num // bucket_size * bucket_size)
+        upper = lower + bucket_size - 1
+        return f"{lower}-{upper}"
+    except (ValueError, TypeError, OverflowError):
         return None
-    lower = int(num // bucket_size * bucket_size)
-    upper = lower + bucket_size - 1
-    return f"{lower}-{upper}"
 
 
 def date_shift(value: Any, days: int) -> str | None:
@@ -56,10 +64,10 @@ def date_shift(value: Any, days: int) -> str | None:
     """
     try:
         dt = parser.parse(str(value))
+        shifted = dt + timedelta(days=days)
+        return shifted.date().isoformat()
     except (parser.ParserError, TypeError, ValueError, OverflowError):
         return None
-    shifted = dt + timedelta(days=days)
-    return shifted.date().isoformat()
 
 
 def tokenize_value(value: Any, salt: str) -> str:

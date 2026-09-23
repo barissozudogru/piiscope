@@ -11,11 +11,11 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import bcrypt
+import jwt
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from fastapi import UploadFile
-from jose import jwt
 
 from .config import settings
 from .exceptions import ConfigurationError, ValidationError

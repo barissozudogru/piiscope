@@ -9,9 +9,10 @@ from __future__ import annotations
 
 import logging
 
+import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from jose import JWTError, jwt
+from jwt.exceptions import InvalidTokenError as JWTError
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 

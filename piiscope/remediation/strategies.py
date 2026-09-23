@@ -190,8 +190,11 @@ def _write_frame(frame: pd.DataFrame, out: Path) -> None:
                 "'pip install piiscope[parquet]' to write parquet output"
             ) from exc
     elif writer == "text":
-        column = "text" if "text" in frame.columns else frame.columns[0]
-        out.write_text("\n".join(frame[column].astype(str)) + "\n", encoding="utf-8")
+        if len(frame.columns) == 0:
+            out.write_text("", encoding="utf-8")
+        else:
+            column = "text" if "text" in frame.columns else frame.columns[0]
+            out.write_text("\n".join(frame[column].astype(str)) + "\n", encoding="utf-8")
     else:  # pragma: no cover - format_for_path already validated
         raise PiiscopeError(f"cannot write {writer} output")
 

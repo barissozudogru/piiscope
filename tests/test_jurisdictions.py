@@ -40,9 +40,28 @@ class TestJurisdictionTagging:
         finding = next(f for f in result.findings if f.detector == "us_ssn")
         assert "CCPA" in finding.jurisdictions
 
+    def test_ccpa_tags_tc_kimlik_and_tr_phone(self):
+        result = scan(
+            _frame(tckn=["10000000146"], phone=["+90 532 123 4567"]),
+            jurisdictions=["ccpa"],
+        )
+        tckn_finding = next(f for f in result.findings if f.detector == "tc_kimlik")
+        assert "CCPA" in tckn_finding.jurisdictions
+        phone_findings = [
+            f for f in result.findings if f.detector in ("tr_phone", "tr_phone_strict")
+        ]
+        assert len(phone_findings) > 0
+        for f in phone_findings:
+            assert "CCPA" in f.jurisdictions
+
     def test_lgpd_tags_email_finding(self):
         result = scan(_frame(email=["joao@example.com"]), jurisdictions=["lgpd"])
         finding = next(f for f in result.findings if f.detector == "email")
+        assert "LGPD" in finding.jurisdictions
+
+    def test_lgpd_tags_tc_kimlik(self):
+        result = scan(_frame(tckn=["10000000146"]), jurisdictions=["lgpd"])
+        finding = next(f for f in result.findings if f.detector == "tc_kimlik")
         assert "LGPD" in finding.jurisdictions
 
     def test_multiple_jurisdictions_merge(self):

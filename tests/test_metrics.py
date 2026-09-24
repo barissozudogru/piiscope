@@ -112,3 +112,79 @@ def test_risk_scorer_unknown_rule_fallback():
     scorer = RiskScorer()
     assert scorer.score_finding("unregistered_rule_id", 1.0).raw_sensitivity == 0.4
 
+
+def test_risk_scorer_score_scan_empty():
+    scorer = RiskScorer()
+    summary = scorer.score_scan(1, [])
+    assert summary.scan_id == 1
+    assert summary.total_findings == 0
+    assert summary.scored_findings == []
+    assert summary.aggregate_score == 0.0
+    assert summary.max_score == 0.0
+    assert summary.critical_count == 0
+    assert summary.high_count == 0
+    assert summary.medium_count == 0
+    assert summary.low_count == 0
+    assert summary.top_rule_ids == []
+
+
+def test_risk_scorer_score_scan_with_findings():
+    scorer = RiskScorer(context="database_field", jurisdictions=["gdpr"])
+    raw_findings = [
+        {"rule_id": "us_ssn", "confidence": 0.95, "record_count": 500},
+        {"rule_id": "credit_card", "confidence": 1.0, "record_count": 1500},
+        {"rule_id": "email", "confidence": 0.8, "record_count": 50},
+        {"rule_id": "url", "confidence": 0.5, "record_count": 5},
+    ]
+    summary = scorer.score_scan(42, raw_findings)
+    assert summary.scan_id == 42
+    assert summary.total_findings == 4
+    assert len(summary.scored_findings) == 4
+    assert summary.max_score == 10.0
+    assert summary.aggregate_score > 0.0
+    assert (
+        summary.critical_count
+        + summary.high_count
+        + summary.medium_count
+        + summary.low_count
+        == 4
+    )
+    assert len(summary.top_rule_ids) == 4
+    assert summary.top_rule_ids[0] in ("us_ssn", "credit_card")
+
+
+def test_risk_scorer_score_scan_default_fields():
+    scorer = RiskScorer()
+    summary = scorer.score_scan(7, [{"rule_id": "email"}])
+    assert summary.total_findings == 1
+    assert len(summary.scored_findings) == 1
+    fs = summary.scored_findings[0]
+    assert fs.rule_id == "email"
+    assert fs.confidence == 0.5
+    assert fs.volume_weight == 0.05
+
+
+def test_risk_scorer_compute_trend_empty_history():
+    trend = RiskScorer.compute_trend([], 6.5)
+    assert trend["direction"] == "stable"
+    assert trend["delta"] == 0.0
+    assert trend["previous_average"] == 6.5
+    assert trend["current_score"] == 6.5
+
+
+def test_risk_scorer_compute_trend_directions():
+    worsening = RiskScorer.compute_trend([4.0, 5.0], 6.5)
+    assert worsening["direction"] == "worsening"
+    assert worsening["delta"] == 2.0
+    assert worsening["previous_average"] == 4.5
+
+    improving = RiskScorer.compute_trend([8.0, 7.0], 5.0)
+    assert improving["direction"] == "improving"
+    assert improving["delta"] == -2.5
+    assert improving["previous_average"] == 7.5
+
+    stable = RiskScorer.compute_trend([5.0, 5.0], 5.02)
+    assert stable["direction"] == "stable"
+    assert stable["delta"] == 0.02
+    assert stable["previous_average"] == 5.0
+

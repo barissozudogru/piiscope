@@ -415,72 +415,12 @@ def scan_cmd(
 
     from piiscope.io.readers import walk_directory
 
-    for p in paths:
-        if p.is_dir():
-            files = walk_directory(p)
-            file_results = [
-                scan(
-                    f,
-                    jurisdictions=jurisdictions,
-                    quasi_identifiers=qi,
-                    sample_rows=sample,
-                    include_metrics=not no_metrics,
-                    min_coverage=0.0 if show_all else 0.15,
-                    dictionaries=custom_dicts,
-                )
-                for f in files
-            ]
-            if format == OutputFormat.json:
-                max_score = max((r.risk.score for r in file_results), default=0)
-                level = "low"
-                if max_score >= 75:
-                    level = "critical"
-                elif max_score >= 50:
-                    level = "high"
-                elif max_score >= 25:
-                    level = "medium"
-
-                payload = {
-                    "files": [r.to_dict() for r in file_results],
-                    "risk": {"score": max_score, "level": level, "drivers": []},
-                }
-                out_text = json.dumps(payload, indent=2)
-                if output:
-                    output.parent.mkdir(parents=True, exist_ok=True)
-                    output.write_text(out_text + "\n", encoding="utf-8")
-                else:
-                    typer.echo(out_text)
-            elif format == OutputFormat.table:
-                table = Table(
-                    title=f"Directory scan: {p}", header_style="bold", title_justify="left"
-                )
-                table.add_column("File")
-                table.add_column("Rows", justify="right")
-                table.add_column("Findings", justify="right")
-                table.add_column("Risk")
-                for r in file_results:
-                    num_findings = sum(f.count for f in r.findings)
-                    table.add_row(
-                        Path(r.source).name,
-                        str(r.rows),
-                        str(num_findings),
-                        Text(r.risk.level.upper(), style=_LEVEL_STYLES[r.risk.level]),
-                    )
-                console.print(table)
-                if verbose:
-                    for r in file_results:
-                        _print_table(console, r)
-            else:
-                _emit(console, file_results, format, output)
-
-            if fail_on is not None:
-                threshold = RANK[fail_on.value]
-                worst = max((RANK[r.risk.level] for r in file_results), default=0)
-                if worst >= threshold:
-                    raise typer.Exit(code=2)
-        else:
-            res = scan(
-                p,
+    if len(paths) == 1 and paths[0].is_dir():
+        p = paths[0]
+        files = walk_directory(p)
+        file_results = [
+            scan(
+                f,
                 jurisdictions=jurisdictions,
                 quasi_identifiers=qi,
                 sample_rows=sample,
@@ -488,8 +428,80 @@ def scan_cmd(
                 min_coverage=0.0 if show_all else 0.15,
                 dictionaries=custom_dicts,
             )
-            _emit(console, [res], format, output)
-            if fail_on is not None and RANK[res.risk.level] >= RANK[fail_on.value]:
+            for f in files
+        ]
+        if format == OutputFormat.json:
+            max_score = max((r.risk.score for r in file_results), default=0)
+            level = "low"
+            if max_score >= 75:
+                level = "critical"
+            elif max_score >= 50:
+                level = "high"
+            elif max_score >= 25:
+                level = "medium"
+
+            payload = {
+                "files": [r.to_dict() for r in file_results],
+                "risk": {"score": max_score, "level": level, "drivers": []},
+            }
+            out_text = json.dumps(payload, indent=2)
+            if output:
+                output.parent.mkdir(parents=True, exist_ok=True)
+                output.write_text(out_text + "\n", encoding="utf-8")
+            else:
+                typer.echo(out_text)
+        elif format == OutputFormat.table:
+            table = Table(
+                title=f"Directory scan: {p}", header_style="bold", title_justify="left"
+            )
+            table.add_column("File")
+            table.add_column("Rows", justify="right")
+            table.add_column("Findings", justify="right")
+            table.add_column("Risk")
+            for r in file_results:
+                num_findings = sum(f.count for f in r.findings)
+                table.add_row(
+                    Path(r.source).name,
+                    str(r.rows),
+                    str(num_findings),
+                    Text(r.risk.level.upper(), style=_LEVEL_STYLES[r.risk.level]),
+                )
+            console.print(table)
+            if verbose:
+                for r in file_results:
+                    _print_table(console, r)
+        else:
+            _emit(console, file_results, format, output)
+
+        if fail_on is not None:
+            threshold = RANK[fail_on.value]
+            worst = max((RANK[r.risk.level] for r in file_results), default=0)
+            if worst >= threshold:
+                raise typer.Exit(code=2)
+    else:
+        targets: list[Path] = []
+        for p in paths:
+            if p.is_dir():
+                targets.extend(walk_directory(p))
+            else:
+                targets.append(p)
+        file_results = [
+            scan(
+                f,
+                jurisdictions=jurisdictions,
+                quasi_identifiers=qi,
+                sample_rows=sample,
+                include_metrics=not no_metrics,
+                min_coverage=0.0 if show_all else 0.15,
+                dictionaries=custom_dicts,
+            )
+            for f in targets
+        ]
+        _emit(console, file_results, format, output)
+        if fail_on is not None:
+            threshold = RANK[fail_on.value]
+            worst = max((RANK[r.risk.level] for r in file_results), default=0)
+            if worst >= threshold:
                 raise typer.Exit(code=2)
 
 

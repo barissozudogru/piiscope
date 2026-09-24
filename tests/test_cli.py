@@ -172,6 +172,67 @@ class TestScanFormats:
         payload = json.loads(out.read_text())
         assert payload["rows"] == 4
 
+    def test_multi_file_scan_json(self):
+        result = _invoke(
+            "scan",
+            str(SAMPLES / "customers.csv"),
+            str(SAMPLES / "medical_notes.csv"),
+            "--format",
+            "json",
+        )
+        assert result.exit_code == 0
+        payload = json.loads(result.output)
+        assert isinstance(payload, list)
+        assert len(payload) == 2
+        sources = [item["source"] for item in payload]
+        assert any("customers.csv" in s for s in sources)
+        assert any("medical_notes.csv" in s for s in sources)
+
+    def test_multi_file_scan_csv_no_repeated_header(self):
+        result = _invoke(
+            "scan",
+            str(SAMPLES / "customers.csv"),
+            str(SAMPLES / "medical_notes.csv"),
+            "--format",
+            "csv",
+        )
+        assert result.exit_code == 0
+        lines = result.output.strip().splitlines()
+        headers = [line for line in lines if line.startswith("source,file")]
+        assert len(headers) == 1, "CSV header should only appear once across multiple files"
+
+    def test_multi_file_scan_output_file(self, tmp_path):
+        out = tmp_path / "combined.json"
+        result = _invoke(
+            "scan",
+            str(SAMPLES / "customers.csv"),
+            str(SAMPLES / "medical_notes.csv"),
+            "--format",
+            "json",
+            "-o",
+            str(out),
+        )
+        assert result.exit_code == 0
+        assert out.exists()
+        payload = json.loads(out.read_text())
+        assert isinstance(payload, list)
+        assert len(payload) == 2
+
+    def test_multi_file_scan_fail_on(self):
+        result = _invoke(
+            "scan",
+            str(SAMPLES / "medical_notes.csv"),
+            str(SAMPLES / "customers.csv"),
+            "--fail-on",
+            "critical",
+            "--format",
+            "json",
+        )
+        assert result.exit_code == 2
+        payload = json.loads(result.output)
+        assert isinstance(payload, list)
+        assert len(payload) == 2
+
 
 class TestFailOn:
     def test_fail_on_at_or_below_risk_level(self):

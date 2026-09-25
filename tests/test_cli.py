@@ -445,6 +445,22 @@ class TestPatternsAndDoctor:
         assert result.exit_code == 0
         assert "pandas" in result.output
         assert "pyarrow" in result.output
+        assert "pip install piiscope[nlp]" in result.output
+
+    def test_doctor_disabled_pyarrow(self, monkeypatch):
+        import importlib.util
+
+        real_find_spec = importlib.util.find_spec
+
+        def mock_find_spec(name, *args, **kwargs):
+            if name == "pyarrow":
+                return None
+            return real_find_spec(name, *args, **kwargs)
+
+        monkeypatch.setattr(importlib.util, "find_spec", mock_find_spec)
+        result = _invoke("doctor")
+        assert result.exit_code == 0
+        assert "pip install piiscope[parquet]" in result.output
 
 
 class TestCustomDictionary:

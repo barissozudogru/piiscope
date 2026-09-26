@@ -293,7 +293,7 @@ def _compute_metrics(
         return None
     qi = (
         [c for c in quasi_identifiers if c in aggregate.columns]
-        if quasi_identifiers
+        if quasi_identifiers is not None
         else _auto_quasi_identifiers(aggregate.columns, findings)
     )
     if not qi:

@@ -55,3 +55,30 @@ def test_scan_dataframe_sample_rows_with_metrics():
     assert result.rows == 10
     assert result.metrics is not None
     assert result.metrics.k_anonymity is not None
+
+
+def test_scan_with_empty_quasi_identifiers_does_not_auto_detect():
+    df = pd.DataFrame(
+        {
+            "age": ["25", "30", "35"],
+            "email": ["user1@example.com", "user2@example.com", "user3@example.com"],
+        }
+    )
+    result = scan(df, quasi_identifiers=[])
+    assert result.metrics is not None
+    assert result.metrics.quasi_identifiers == []
+    assert result.metrics.k_anonymity is None
+
+
+def test_scan_with_default_quasi_identifiers_auto_detects():
+    df = pd.DataFrame(
+        {
+            "age": ["25", "30", "35"],
+            "email": ["user1@example.com", "user2@example.com", "user3@example.com"],
+        }
+    )
+    result = scan(df, quasi_identifiers=None)
+    assert result.metrics is not None
+    assert "age" in result.metrics.quasi_identifiers
+    assert result.metrics.k_anonymity is not None
+

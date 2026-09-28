@@ -466,10 +466,19 @@ def scan_cmd(
                     str(num_findings),
                     Text(r.risk.level.upper(), style=_LEVEL_STYLES[r.risk.level]),
                 )
-            console.print(table)
-            if verbose:
-                for r in file_results:
-                    _print_table(console, r)
+            if output is not None:
+                output.parent.mkdir(parents=True, exist_ok=True)
+                file_console = Console(file=output.open("w", encoding="utf-8"), width=120)
+                file_console.print(table)
+                if verbose:
+                    for r in file_results:
+                        _print_table(file_console, r)
+                file_console.file.close()
+            else:
+                console.print(table)
+                if verbose:
+                    for r in file_results:
+                        _print_table(console, r)
         else:
             _emit(console, file_results, format, output)
 

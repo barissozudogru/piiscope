@@ -63,6 +63,33 @@ class TestScanFormats:
         headers = [line for line in lines if line.startswith("source,file")]
         assert len(headers) == 1, "CSV header should only appear once"
 
+    def test_directory_scan_table_output_file(self, tmp_path):
+        d = tmp_path / "data"
+        d.mkdir()
+        (d / "a.csv").write_text("email\na@example.com\n")
+        out = tmp_path / "nested" / "report.txt"
+        result = _invoke("scan", str(d), "--format", "table", "-o", str(out))
+        assert result.exit_code == 0
+        assert out.exists()
+        content = out.read_text(encoding="utf-8")
+        assert "Directory scan:" in content
+        assert "a.csv" in content
+        assert result.output == ""
+
+    def test_directory_scan_table_output_file_verbose(self, tmp_path):
+        d = tmp_path / "data"
+        d.mkdir()
+        (d / "a.csv").write_text("email\na@example.com\n")
+        out = tmp_path / "report_verbose.txt"
+        result = _invoke("scan", str(d), "--format", "table", "-v", "-o", str(out))
+        assert result.exit_code == 0
+        assert out.exists()
+        content = out.read_text(encoding="utf-8")
+        assert "Directory scan:" in content
+        assert "Findings" in content
+        assert "email" in content
+        assert result.output == ""
+
     def test_table_output(self):
         result = _invoke("scan", str(SAMPLES / "medical_notes.csv"))
         assert result.exit_code == 0

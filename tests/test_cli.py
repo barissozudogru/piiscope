@@ -440,7 +440,17 @@ class TestPatternsAndDoctor:
         # detector exists yet, so it never appears in the detector table
         assert "cpf" not in result.output
 
-    def test_doctor(self):
+    def test_doctor(self, monkeypatch):
+        import importlib.util
+
+        real_find_spec = importlib.util.find_spec
+
+        def mock_find_spec(name, *args, **kwargs):
+            if name == "spacy":
+                return None
+            return real_find_spec(name, *args, **kwargs)
+
+        monkeypatch.setattr(importlib.util, "find_spec", mock_find_spec)
         result = _invoke("doctor")
         assert result.exit_code == 0
         assert "pandas" in result.output

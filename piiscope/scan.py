@@ -293,7 +293,7 @@ def _compute_metrics(
         return None
     qi = (
         [c for c in quasi_identifiers if c in aggregate.columns]
-        if quasi_identifiers
+        if quasi_identifiers is not None
         else _auto_quasi_identifiers(aggregate.columns, findings)
     )
     if not qi:
@@ -435,7 +435,8 @@ def scan(
 
     if isinstance(source, pd.DataFrame):
         label = "dataframe"
-        frame = source.fillna("").astype(str)
+        frame = source.iloc[: max(0, sample_rows)] if sample_rows is not None else source
+        frame = frame.fillna("").astype(str)
         aggregate.scan_frame(frame, None, keep_for_metrics)
     elif isinstance(source, (str, Path)) and Path(source).is_dir():
         label = str(source)

@@ -646,10 +646,10 @@ def doctor_cmd() -> None:
 
         table.add_row("pyarrow (parquet)", "enabled", f"v{pyarrow.__version__}")
     else:
-        table.add_row("pyarrow (parquet)", "disabled", "pip install piiscope[parquet]")
+        table.add_row("pyarrow (parquet)", "disabled", Text("pip install piiscope[parquet]"))
 
     if find_spec("spacy") is None:
-        table.add_row("spacy (nlp)", "disabled", "pip install piiscope[nlp]")
+        table.add_row("spacy (nlp)", "disabled", Text("pip install piiscope[nlp]"))
     else:
         import spacy
 

@@ -181,6 +181,63 @@ def test_remediate_dataframe_with_integer_columns(tmp_path):
     assert res.rows == 1
     assert "0" in res.columns_changed
     assert "1" in res.columns_changed
+    assert list(df.columns) == [0, 1]
+    assert all(isinstance(c, int) for c in df.columns)
     remediated = pd.read_csv(out)
     assert remediated["0"].iloc[0] != "alice@example.com"
     assert "@" not in remediated["0"].iloc[0]
+
+
+def test_remediate_frame_preserves_non_string_column_names():
+    df = pd.DataFrame([["alice@example.com", "4111111111111111"]])
+    assert list(df.columns) == [0, 1]
+    assert all(isinstance(c, int) for c in df.columns)
+
+    changed, _ = remediate_frame(df, strategy="hash")
+
+    assert list(df.columns) == [0, 1]
+    assert all(isinstance(c, int) for c in df.columns)
+    assert "0" in changed
+    assert "1" in changed
+    assert df[0].iloc[0] != "alice@example.com"
+    assert "@" not in df[0].iloc[0]
+    assert df[1].iloc[0] != "4111111111111111"
+
+    df_explicit = pd.DataFrame([["alice@example.com", "4111111111111111"]])
+    changed_explicit, _ = remediate_frame(df_explicit, strategy="hash", columns=[0])
+    assert list(df_explicit.columns) == [0, 1]
+    assert all(isinstance(c, int) for c in df_explicit.columns)
+    assert changed_explicit == {"0": 1}
+    assert df_explicit[0].iloc[0] != "alice@example.com"
+    assert df_explicit[1].iloc[0] == "4111111111111111"
+
+    df_str_cols = pd.DataFrame([["alice@example.com", "4111111111111111"]])
+    changed_str_cols, _ = remediate_frame(df_str_cols, strategy="hash", columns=["1"])
+    assert list(df_str_cols.columns) == [0, 1]
+    assert all(isinstance(c, int) for c in df_str_cols.columns)
+    assert changed_str_cols == {"1": 1}
+    assert df_str_cols[1].iloc[0] != "4111111111111111"
+
+
+def test_apply_strategy_flexible_column_matching():
+    # Integer columns with string column specifications
+    df_int = pd.DataFrame([["alice@example.com", "4111111111111111"]])
+    changed, _ = apply_strategy(df_int, strategy="hash", columns=["0", "1"])
+    assert list(df_int.columns) == [0, 1]
+    assert all(isinstance(c, int) for c in df_int.columns)
+    assert changed == {"0": 1, "1": 1}
+    assert df_int[0].iloc[0] != "alice@example.com"
+
+    # String columns with integer column specifications
+    df_str = pd.DataFrame({"0": ["alice@example.com"], "1": ["4111111111111111"]})
+    changed, _ = apply_strategy(df_str, strategy="hash", columns=[0, 1])
+    assert list(df_str.columns) == ["0", "1"]
+    assert changed == {"0": 1, "1": 1}
+    assert df_str["0"].iloc[0] != "alice@example.com"
+
+    # Integer columns with integer column specifications
+    df_int2 = pd.DataFrame([["alice@example.com", "4111111111111111"]])
+    changed, _ = apply_strategy(df_int2, strategy="hash", columns=[0, 1])
+    assert list(df_int2.columns) == [0, 1]
+    assert changed == {"0": 1, "1": 1}
+    assert df_int2[0].iloc[0] != "alice@example.com"

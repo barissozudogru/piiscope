@@ -21,7 +21,7 @@ import secrets
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Union
+from typing import Any, Union
 
 import pandas as pd
 
@@ -87,7 +87,7 @@ def apply_strategy(
     frame: pd.DataFrame,
     *,
     strategy: str,
-    columns: Sequence[str],
+    columns: Sequence[Any],
     salt: str | None = None,
     bucket_size: int = 10,
     shift_days: int = 30,
@@ -101,7 +101,7 @@ def apply_strategy(
     transform = _make_transform(strategy, effective_salt, bucket_size, shift_days)
     changed: dict[str, int] = {}
     for column in columns:
-        col_key = column
+        col_key: Any = column
         if col_key not in frame.columns:
             if isinstance(col_key, str) and col_key.isdigit() and int(col_key) in frame.columns:
                 col_key = int(col_key)
@@ -147,7 +147,7 @@ def remediate_frame(
     frame: pd.DataFrame,
     *,
     strategy: str = "hash",
-    columns: Sequence[str] | None = None,
+    columns: Sequence[Any] | None = None,
     salt: str | None = None,
     bucket_size: int = 10,
     shift_days: int = 30,
@@ -162,8 +162,7 @@ def remediate_frame(
         raise RemediationError(
             f"unknown strategy '{strategy}'; choose from {', '.join(STRATEGIES)}"
         )
-    frame.columns = [str(c) for c in frame.columns]
-    selected = [str(c) for c in columns] if columns is not None else None
+    selected = list(columns) if columns is not None else None
     if selected is None:
         scan_target: str | Path | pd.DataFrame = source if source is not None else frame
         selected = columns_with_findings(
@@ -211,7 +210,7 @@ def remediate(
     out: PathLike,
     *,
     strategy: str = "hash",
-    columns: Sequence[str] | None = None,
+    columns: Sequence[Any] | None = None,
     salt: str | None = None,
     bucket_size: int = 10,
     shift_days: int = 30,
@@ -225,7 +224,6 @@ def remediate(
     out_path = Path(out)
     if isinstance(source, pd.DataFrame):
         frame = source.fillna("").astype(str)
-        frame.columns = [str(c) for c in frame.columns]
         source_label = "dataframe"
     else:
         source_path = Path(source)

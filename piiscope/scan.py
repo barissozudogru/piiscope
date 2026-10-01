@@ -187,8 +187,9 @@ class _Aggregate:
 
     def observe_columns(self, columns: Sequence[str]) -> None:
         for col in columns:
-            if col not in self.columns:
-                self.columns.append(col)
+            col_str = str(col)
+            if col_str not in self.columns:
+                self.columns.append(col_str)
 
     def add(self, findings: list[EngineFinding], file: str | None) -> None:
         for f in findings:
@@ -219,8 +220,10 @@ class _Aggregate:
         self.rows += len(frame)
         self.observe_columns(list(frame.columns))
         for col in frame.columns:
+            col_str = str(col)
             non_null = (frame[col] != "").sum()
-            self.non_null_counts[(file, col)] = self.non_null_counts.get((file, col), 0) + int(
+            count_key = (file, col_str)
+            self.non_null_counts[count_key] = self.non_null_counts.get(count_key, 0) + int(
                 non_null
             )
         records = frame.to_dict("records")
@@ -265,7 +268,7 @@ def _resolve_jurisdictions(jurisdictions: Sequence[str]) -> list[str]:
 
 def _auto_quasi_identifiers(columns: Sequence[str], findings: list[Finding]) -> list[str]:
     """Guess quasi identifiers from column names and detected categories."""
-    selected = [c for c in columns if c.lower() in _QI_NAME_HINTS]
+    selected = [str(c) for c in columns if str(c).lower() in _QI_NAME_HINTS]
     demographic = sorted(
         {f.column for f in findings if f.category == "demographic" and f.column not in selected}
     )
@@ -292,7 +295,7 @@ def _compute_metrics(
     if not aggregate.qi_frames:
         return None
     qi = (
-        [c for c in quasi_identifiers if c in aggregate.columns]
+        [str(c) for c in quasi_identifiers if str(c) in aggregate.columns]
         if quasi_identifiers is not None
         else _auto_quasi_identifiers(aggregate.columns, findings)
     )
@@ -437,6 +440,7 @@ def scan(
         label = "dataframe"
         frame = source.iloc[: max(0, sample_rows)] if sample_rows is not None else source
         frame = frame.fillna("").astype(str)
+        frame.columns = [str(c) for c in frame.columns]
         aggregate.scan_frame(frame, None, keep_for_metrics)
     elif isinstance(source, (str, Path)) and Path(source).is_dir():
         label = str(source)

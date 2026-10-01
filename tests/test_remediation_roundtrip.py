@@ -172,3 +172,15 @@ def test_generalise_handles_nan_and_non_finite_values():
     assert frame["age"].iloc[1] == "n*n"
     assert frame["age"].iloc[2] == "i*f"
     assert frame["age"].iloc[3] == ""
+
+
+def test_remediate_dataframe_with_integer_columns(tmp_path):
+    df = pd.DataFrame([["alice@example.com", "4111111111111111"]])
+    out = tmp_path / "out.csv"
+    res = remediate(df, out, strategy="hash")
+    assert res.rows == 1
+    assert "0" in res.columns_changed
+    assert "1" in res.columns_changed
+    remediated = pd.read_csv(out)
+    assert remediated["0"].iloc[0] != "alice@example.com"
+    assert "@" not in remediated["0"].iloc[0]

@@ -289,7 +289,7 @@ def column_name_context_boost(column_name: str, rule_id: str) -> float:
     rule is applicable. A multiplier < 1.0 downgrades confidence.
     A multiplier of 1.0 means no context signal is available.
     """
-    col_lower = column_name.lower().replace("-", "_").replace(" ", "_")
+    col_lower = str(column_name).lower().replace("-", "_").replace(" ", "_")
     # Strip common prefixes/suffixes for matching
     col_clean = col_lower
 

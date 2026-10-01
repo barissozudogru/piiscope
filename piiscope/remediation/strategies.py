@@ -101,14 +101,20 @@ def apply_strategy(
     transform = _make_transform(strategy, effective_salt, bucket_size, shift_days)
     changed: dict[str, int] = {}
     for column in columns:
-        if column not in frame.columns:
-            raise RemediationError(
-                f"column '{column}' not found; available: {', '.join(map(str, frame.columns))}"
-            )
-        series = frame[column].astype(str)
+        col_key = column
+        if col_key not in frame.columns:
+            if isinstance(col_key, str) and col_key.isdigit() and int(col_key) in frame.columns:
+                col_key = int(col_key)
+            elif str(col_key) in frame.columns:
+                col_key = str(col_key)
+            else:
+                raise RemediationError(
+                    f"column '{column}' not found; available: {', '.join(map(str, frame.columns))}"
+                )
+        series = frame[col_key].astype(str)
         transformed = series.map(transform)
-        changed[column] = int((transformed != series).sum())
-        frame[column] = transformed
+        changed[str(column)] = int((transformed != series).sum())
+        frame[col_key] = transformed
     return changed, effective_salt
 
 
@@ -156,7 +162,8 @@ def remediate_frame(
         raise RemediationError(
             f"unknown strategy '{strategy}'; choose from {', '.join(STRATEGIES)}"
         )
-    selected = list(columns) if columns is not None else None
+    frame.columns = [str(c) for c in frame.columns]
+    selected = [str(c) for c in columns] if columns is not None else None
     if selected is None:
         scan_target: str | Path | pd.DataFrame = source if source is not None else frame
         selected = columns_with_findings(
@@ -218,6 +225,7 @@ def remediate(
     out_path = Path(out)
     if isinstance(source, pd.DataFrame):
         frame = source.fillna("").astype(str)
+        frame.columns = [str(c) for c in frame.columns]
         source_label = "dataframe"
     else:
         source_path = Path(source)

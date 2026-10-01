@@ -241,3 +241,41 @@ def test_apply_strategy_flexible_column_matching():
     assert list(df_int2.columns) == [0, 1]
     assert changed == {"0": 1, "1": 1}
     assert df_int2[0].iloc[0] != "alice@example.com"
+
+
+def test_remediate_dataframe_normalizes_columns_to_strings(tmp_path):
+    df = pd.DataFrame([["alice@example.com", "4111111111111111"]])
+    out = tmp_path / "out.csv"
+    res = remediate(df, out, strategy="hash")
+    assert res.rows == 1
+    assert "0" in res.columns_changed
+    assert "1" in res.columns_changed
+    assert list(df.columns) == [0, 1]
+    assert all(isinstance(c, int) for c in df.columns)
+    remediated = pd.read_csv(out)
+    assert list(remediated.columns) == ["0", "1"]
+    assert all(isinstance(c, str) for c in remediated.columns)
+
+
+def test_remediate_dataframe_with_negative_integer_column(tmp_path):
+    df = pd.DataFrame([["alice@example.com"]])
+    df.columns = [-1]
+    out = tmp_path / "out.csv"
+    res = remediate(df, out, strategy="hash")
+    assert "-1" in res.columns_changed
+    assert list(df.columns) == [-1]
+    assert pd.api.types.is_integer_dtype(df.columns)
+    remediated = pd.read_csv(out)
+    assert list(remediated.columns) == ["-1"]
+    assert remediated["-1"].iloc[0] != "alice@example.com"
+
+
+def test_remediate_frame_with_negative_integer_column():
+    df = pd.DataFrame([["alice@example.com"]])
+    df.columns = [-1]
+    changed, _ = remediate_frame(df, strategy="hash")
+    assert list(df.columns) == [-1]
+    assert pd.api.types.is_integer_dtype(df.columns)
+    assert changed == {"-1": 1}
+    assert df[-1].iloc[0] != "alice@example.com"
+

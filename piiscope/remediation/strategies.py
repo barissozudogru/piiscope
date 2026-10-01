@@ -103,7 +103,10 @@ def apply_strategy(
     for column in columns:
         col_key: Any = column
         if col_key not in frame.columns:
-            if isinstance(col_key, str) and col_key.isdigit() and int(col_key) in frame.columns:
+            matched = [c for c in frame.columns if str(c) == str(col_key)]
+            if len(matched) == 1:
+                col_key = matched[0]
+            elif isinstance(col_key, str) and col_key.isdigit() and int(col_key) in frame.columns:
                 col_key = int(col_key)
             elif str(col_key) in frame.columns:
                 col_key = str(col_key)
@@ -224,6 +227,7 @@ def remediate(
     out_path = Path(out)
     if isinstance(source, pd.DataFrame):
         frame = source.fillna("").astype(str)
+        frame.columns = [str(c) for c in frame.columns]
         source_label = "dataframe"
     else:
         source_path = Path(source)

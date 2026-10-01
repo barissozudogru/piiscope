@@ -208,6 +208,12 @@ class TestColumnNameContext:
         mult = column_name_context_boost("data", "email")
         assert mult == 1.0
 
+    def test_non_string_column_name_returns_one(self):
+        mult = column_name_context_boost(0, "email")
+        assert mult == 1.0
+        mult_name = column_name_context_boost(1, "given_name")
+        assert mult_name == 1.0
+
 
 # ============================================================================
 # Regex pattern tests

@@ -21,7 +21,7 @@ import secrets
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Union
+from typing import Any, Union
 
 import pandas as pd
 
@@ -87,7 +87,7 @@ def apply_strategy(
     frame: pd.DataFrame,
     *,
     strategy: str,
-    columns: Sequence[str],
+    columns: Sequence[Any],
     salt: str | None = None,
     bucket_size: int = 10,
     shift_days: int = 30,
@@ -101,14 +101,23 @@ def apply_strategy(
     transform = _make_transform(strategy, effective_salt, bucket_size, shift_days)
     changed: dict[str, int] = {}
     for column in columns:
-        if column not in frame.columns:
-            raise RemediationError(
-                f"column '{column}' not found; available: {', '.join(map(str, frame.columns))}"
-            )
-        series = frame[column].astype(str)
+        col_key: Any = column
+        if col_key not in frame.columns:
+            matched = [c for c in frame.columns if str(c) == str(col_key)]
+            if len(matched) == 1:
+                col_key = matched[0]
+            elif isinstance(col_key, str) and col_key.isdigit() and int(col_key) in frame.columns:
+                col_key = int(col_key)
+            elif str(col_key) in frame.columns:
+                col_key = str(col_key)
+            else:
+                raise RemediationError(
+                    f"column '{column}' not found; available: {', '.join(map(str, frame.columns))}"
+                )
+        series = frame[col_key].astype(str)
         transformed = series.map(transform)
-        changed[column] = int((transformed != series).sum())
-        frame[column] = transformed
+        changed[str(column)] = int((transformed != series).sum())
+        frame[col_key] = transformed
     return changed, effective_salt
 
 
@@ -141,7 +150,7 @@ def remediate_frame(
     frame: pd.DataFrame,
     *,
     strategy: str = "hash",
-    columns: Sequence[str] | None = None,
+    columns: Sequence[Any] | None = None,
     salt: str | None = None,
     bucket_size: int = 10,
     shift_days: int = 30,
@@ -204,7 +213,7 @@ def remediate(
     out: PathLike,
     *,
     strategy: str = "hash",
-    columns: Sequence[str] | None = None,
+    columns: Sequence[Any] | None = None,
     salt: str | None = None,
     bucket_size: int = 10,
     shift_days: int = 30,
@@ -218,6 +227,7 @@ def remediate(
     out_path = Path(out)
     if isinstance(source, pd.DataFrame):
         frame = source.fillna("").astype(str)
+        frame.columns = [str(c) for c in frame.columns]
         source_label = "dataframe"
     else:
         source_path = Path(source)

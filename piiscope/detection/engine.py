@@ -334,6 +334,7 @@ class DetectionEngine:
         if not text:
             return findings
 
+        column_name = str(column_name)
         placeholder = 0  # record_index is set later by scan_row
 
         # ------------------------------------------------------------------
@@ -630,7 +631,7 @@ class DetectionEngine:
         """Scan a dictionary representing one row and return all findings."""
         all_findings: list[Finding] = []
         for col_name, value in row.items():
-            cell_findings = self.detect_cell(value, col_name)
+            cell_findings = self.detect_cell(value, str(col_name))
             for f in cell_findings:
                 f.record_index = record_index
                 all_findings.append(f)

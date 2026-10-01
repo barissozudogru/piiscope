@@ -82,3 +82,27 @@ def test_scan_with_default_quasi_identifiers_auto_detects():
     assert "age" in result.metrics.quasi_identifiers
     assert result.metrics.k_anonymity is not None
 
+
+def test_scan_dataframe_with_integer_columns():
+    df = pd.DataFrame([["user@example.com", "1990-01-01"]])
+    result = scan(df)
+    assert result.rows == 1
+    assert result.columns == 2
+    detectors = {f.column: f.detector for f in result.findings}
+    assert detectors.get("0") == "email"
+    assert detectors.get("1") == "date"
+
+
+def test_scan_dataframe_with_integer_quasi_identifiers():
+    df = pd.DataFrame(
+        [
+            ["user1@example.com", "30"],
+            ["user2@example.com", "30"],
+            ["user3@example.com", "35"],
+        ]
+    )
+    result = scan(df, quasi_identifiers=[1])
+    assert result.metrics is not None
+    assert result.metrics.quasi_identifiers == ["1"]
+    assert result.metrics.k_anonymity == 1
+

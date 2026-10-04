@@ -30,10 +30,25 @@ pip install "piiscope[nlp]"
 ```
 
 ## Quickstart
-Scan a file to identify privacy risks:
+Scan a file you already have:
+
 ```bash
+piiscope scan /path/to/your/data.csv
+```
+
+The walkthrough below uses the dataset already tracked in this repository. Clone
+the repository first if you want to reproduce it; `pip install` does not place the
+repository's `samples/` directory in your working directory.
+
+```bash
+git clone https://github.com/barissozudogru/piiscope.git
+cd piiscope
 piiscope scan samples/customers.csv
 ```
+
+<details>
+<summary>Existing dataset walkthrough and output</summary>
+
 ```text
 ╭─ piiscope scan ──────────────────────────────────────────────────────────────────────────────────╮
 │        Source  samples/customers.csv                                                             │
@@ -80,7 +95,7 @@ Findings
 Next: piiscope remediate samples/customers.csv --out samples/customers_safe.csv --strategy hash
 ```
 
-Remediate the file, then prove the output is clean:
+Remediate the file, then rescan the output for remaining detector findings. A clean detector report does not prove anonymisation or regulatory compliance:
 ```bash
 piiscope remediate samples/customers.csv --out customers_safe.csv --strategy hash
 piiscope scan customers_safe.csv
@@ -122,6 +137,8 @@ No personal data detected.
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 Nothing to remediate.
 ```
+
+</details>
 
 If this saves you time, consider [starring the repository](https://github.com/barissozudogru/piiscope). It helps other developers find it.
 
@@ -291,15 +308,17 @@ Access the UI at `http://localhost:3000` and API docs at `http://localhost:8000/
 Contributions are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md) for the development workflow and guidelines. For reporting vulnerabilities, check [SECURITY.md](SECURITY.md).
 Licensed under the [Apache 2.0 License](LICENSE).
 
-**Data handling:** All scans execute completely locally. No data is sent to external servers, and samples included in reports are partially redacted to prevent leakage.
+**Data handling:** Scans run locally. Reports can include partially redacted samples; treat report files as sensitive and review their contents before sharing them.
 
 ## Citation
 
 If you use piiscope in academic work, please cite it. The concept DOI below always
-resolves to the latest version; use the version DOI to cite a specific release.
+resolves to the latest archived version. The archived v1.1.1 snapshot is distinct
+from the current source and package version; use its version DOI only when citing
+that snapshot.
 
 - Concept DOI (all versions): [10.5281/zenodo.22071806](https://doi.org/10.5281/zenodo.22071806)
-- Latest archived release (v1.1.1): [10.5281/zenodo.22071807](https://doi.org/10.5281/zenodo.22071807)
+- Archived v1.1.1 snapshot: [10.5281/zenodo.22071807](https://doi.org/10.5281/zenodo.22071807)
 
 ```bibtex
 @software{sozudogru_piiscope,

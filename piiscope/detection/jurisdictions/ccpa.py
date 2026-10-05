@@ -242,6 +242,16 @@ PROFILE: dict[str, dict[str, Any]] = {
         "consumer_rights": ["know", "delete"],
         "is_sensitive": False,
     },
+    "tr_phone": {
+        "status": "optional",
+        "severity": 0.4,
+        "article": "§ 1798.140(v)(A)",
+        "obligation": (
+            "Non-US phone numbers are still identifiers if they relate to California residents."
+        ),
+        "consumer_rights": ["know", "delete"],
+        "is_sensitive": False,
+    },
     # ------------------------------------------------------------------
     # Category L - Sensitive personal information  (CPRA § 1798.121)
     # ------------------------------------------------------------------
@@ -269,6 +279,17 @@ PROFILE: dict[str, dict[str, Any]] = {
         "is_sensitive": True,
     },
     "national_id": {
+        "status": "required",
+        "severity": 0.9,
+        "article": "§ 1798.121(a) - Sensitive PI (government ID)",
+        "obligation": (
+            "National / government ID numbers are sensitive PI. "
+            "Apply CPRA use-limitation obligations."
+        ),
+        "consumer_rights": ["know", "delete", "limit_use"],
+        "is_sensitive": True,
+    },
+    "tc_kimlik": {
         "status": "required",
         "severity": 0.9,
         "article": "§ 1798.121(a) - Sensitive PI (government ID)",

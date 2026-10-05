@@ -104,8 +104,12 @@ _RULE_CLASSIFICATIONS: dict[str, ClassificationResult] = {
     "tr_phone": ClassificationResult(
         DataCategory.PII, ["contact", "phone", "tr"], "Turkish phone number"
     ),
+    "tr_phone_strict": ClassificationResult(
+        DataCategory.PII, ["contact", "phone", "tr"], "Turkish phone number (strict)"
+    ),
     # PII - demographic
     "given_name": ClassificationResult(DataCategory.PII, ["demographic", "name"], "Personal name"),
+    "surname": ClassificationResult(DataCategory.PII, ["demographic", "name"], "Surname"),
     "ner_person": ClassificationResult(DataCategory.PII, ["demographic", "name"], "Person (NER)"),
     "date": ClassificationResult(
         DataCategory.PII, ["demographic", "date_of_birth"], "Date (potentially DOB)"
@@ -113,6 +117,9 @@ _RULE_CLASSIFICATIONS: dict[str, ClassificationResult] = {
     # PHI - health information
     "medical_record": ClassificationResult(
         DataCategory.PHI, ["health", "mrn"], "Medical record number"
+    ),
+    "medical_condition": ClassificationResult(
+        DataCategory.PHI, ["health", "condition"], "Medical condition"
     ),
     "hospital_name": ClassificationResult(
         DataCategory.PHI, ["health", "facility"], "Hospital name"
@@ -133,6 +140,12 @@ _RULE_CLASSIFICATIONS: dict[str, ClassificationResult] = {
         DataCategory.PCI, ["payment", "swift", "bic"], "SWIFT/BIC code"
     ),
     "vat": ClassificationResult(DataCategory.CONFIDENTIAL, ["financial", "vat"], "EU VAT number"),
+    "vat_de": ClassificationResult(
+        DataCategory.CONFIDENTIAL, ["financial", "vat", "de"], "German VAT number"
+    ),
+    "vat_tr": ClassificationResult(
+        DataCategory.CONFIDENTIAL, ["financial", "vat", "tr"], "Turkish Tax / VKN"
+    ),
     # Internal / network
     "ipv4_address": ClassificationResult(
         DataCategory.INTERNAL, ["network", "ipv4"], "IPv4 address"
@@ -141,6 +154,24 @@ _RULE_CLASSIFICATIONS: dict[str, ClassificationResult] = {
         DataCategory.INTERNAL, ["network", "ipv6"], "IPv6 address"
     ),
     "url": ClassificationResult(DataCategory.INTERNAL, ["network", "url"], "URL"),
+}
+
+_CATEGORY_CLASSIFICATIONS: dict[str, ClassificationResult] = {
+    "national_id": ClassificationResult(
+        DataCategory.PII, ["national_id"], "National identifier"
+    ),
+    "contact": ClassificationResult(DataCategory.PII, ["contact"], "Contact information"),
+    "name": ClassificationResult(DataCategory.PII, ["demographic", "name"], "Personal name"),
+    "demographic": ClassificationResult(
+        DataCategory.PII, ["demographic"], "Demographic information"
+    ),
+    "health": ClassificationResult(DataCategory.PHI, ["health"], "Health information"),
+    "financial": ClassificationResult(
+        DataCategory.PCI, ["payment"], "Financial / payment information"
+    ),
+    "network": ClassificationResult(
+        DataCategory.INTERNAL, ["network"], "Network identifier"
+    ),
 }
 
 _DEFAULT_CLASSIFICATION = ClassificationResult(
@@ -239,8 +270,12 @@ class DataClassifier:
                 severity=severity,
             )
 
-        # 2. Built-in mapping
-        result = _RULE_CLASSIFICATIONS.get(rule_id, _DEFAULT_CLASSIFICATION)
+        # 2. Built-in mapping (rule_id -> pii_category fallback -> default)
+        result = _RULE_CLASSIFICATIONS.get(rule_id)
+        if result is None and pii_category:
+            result = _CATEGORY_CLASSIFICATIONS.get(pii_category)
+        if result is None:
+            result = _DEFAULT_CLASSIFICATION
 
         return ClassifiedFinding(
             finding_id=finding_id,

@@ -143,8 +143,8 @@ PATTERNS: dict[str, PatternDefinition] = {
     #   tr_phone     - Turkish mobile/landline
     # ------------------------------------------------------------------
     "eu_phone": PatternDefinition(
-        r"\b(?:\+(?:3[0-9]|4[0-9]|5[0-9]|7[0-9]|8[0-9]|9[0-9])[0-9 \-\.]{6,15}"
-        r"|0[1-9][0-9 \-\.]{7,13})\b",
+        r"(?<!\w)(?:\+(?:3[0-9]|4[0-9]|5[0-9]|7[0-9]|8[0-9]|9[0-9])[0-9 \-\.]{6,15}"
+        r"|0[1-9][0-9 \-\.]{7,13})(?!\w)",
         "European telephone number",
         0.4,
         pii_category="contact",
@@ -159,7 +159,7 @@ PATTERNS: dict[str, PatternDefinition] = {
         pii_category="contact",
     ),
     "tr_phone": PatternDefinition(
-        r"\b(?:\+90[ \-]?)?0?[0-9]{3}[ \-]?[0-9]{3}[ \-]?[0-9]{2}[ \-]?[0-9]{2}\b",
+        r"(?<!\w)(?:\+90[ \-]?|0)[1-9][0-9]{2}[ \-]?[0-9]{3}[ \-]?[0-9]{2}[ \-]?[0-9]{2}(?!\w)",
         "Turkish telephone number",
         0.4,
         pii_category="contact",
@@ -178,15 +178,17 @@ PATTERNS: dict[str, PatternDefinition] = {
         pii_category="network",
     ),
     "ipv6_address": PatternDefinition(
-        r"\b(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}\b"
-        r"|\b(?:[0-9a-fA-F]{1,4}:){1,7}:\b"
-        r"|\b::(?:[0-9a-fA-F]{1,4}:){0,6}[0-9a-fA-F]{1,4}\b"
-        r"|\b(?:[0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}\b"
-        r"|\b(?:[0-9a-fA-F]{1,4}:){1,5}(?::[0-9a-fA-F]{1,4}){1,2}\b"
-        r"|\b(?:[0-9a-fA-F]{1,4}:){1,4}(?::[0-9a-fA-F]{1,4}){1,3}\b"
-        r"|\b(?:[0-9a-fA-F]{1,4}:){1,3}(?::[0-9a-fA-F]{1,4}){1,4}\b"
-        r"|\b(?:[0-9a-fA-F]{1,4}:){1,2}(?::[0-9a-fA-F]{1,4}){1,5}\b"
-        r"|\b[0-9a-fA-F]{1,4}:(?::[0-9a-fA-F]{1,4}){1,6}\b",
+        r"(?<![\w:])(?:"
+        r"(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}"
+        r"|(?:[0-9a-fA-F]{1,4}:){1,7}:"
+        r"|::(?:[0-9a-fA-F]{1,4}:){0,6}[0-9a-fA-F]{1,4}"
+        r"|(?:[0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}"
+        r"|(?:[0-9a-fA-F]{1,4}:){1,5}(?::[0-9a-fA-F]{1,4}){1,2}"
+        r"|(?:[0-9a-fA-F]{1,4}:){1,4}(?::[0-9a-fA-F]{1,4}){1,3}"
+        r"|(?:[0-9a-fA-F]{1,4}:){1,3}(?::[0-9a-fA-F]{1,4}){1,4}"
+        r"|(?:[0-9a-fA-F]{1,4}:){1,2}(?::[0-9a-fA-F]{1,4}){1,5}"
+        r"|[0-9a-fA-F]{1,4}:(?::[0-9a-fA-F]{1,4}){1,6}"
+        r")(?![\w:])",
         "IPv6 address",
         0.4,
         pii_category="network",
@@ -240,6 +242,7 @@ PATTERNS: dict[str, PatternDefinition] = {
         "Passport number (generic)",
         0.8,
         pii_category="national_id",
+        case_sensitive=True,
     ),
     # ------------------------------------------------------------------
     # Health / medical record identifiers
@@ -310,7 +313,7 @@ PATTERNS: dict[str, PatternDefinition] = {
     # prefix (+90) optional.
     # ------------------------------------------------------------------
     "tr_phone_strict": PatternDefinition(
-        r"\b(?:\+90[ \-]?)?0[1-9][0-9]{2}[ \-]?[0-9]{3}[ \-]?[0-9]{2}[ \-]?[0-9]{2}\b",
+        r"(?<!\w)(?:\+90[ \-]?|0)[1-9][0-9]{2}[ \-]?[0-9]{3}[ \-]?[0-9]{2}[ \-]?[0-9]{2}(?!\w)",
         "Turkish telephone number (strict)",
         0.45,
         pii_category="contact",

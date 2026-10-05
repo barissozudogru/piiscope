@@ -7,6 +7,7 @@ import os
 import sys
 from pathlib import Path
 
+import pandas as pd
 import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
@@ -40,6 +41,55 @@ class TestVersionAndHelp:
 
 
 class TestScanFormats:
+    def test_directory_scan(self, tmp_path):
+        d = tmp_path / "data"
+        d.mkdir()
+        (d / "a.csv").write_text("email\na@example.com\n")
+        (d / "b.csv").write_text("phone\n+1-555-555-5555\n")
+        result = _invoke("scan", str(d), "--format", "json")
+        assert result.exit_code == 0
+        payload = json.loads(result.output)
+        assert "files" in payload
+        assert len(payload["files"]) == 2
+
+    def test_directory_scan_csv_no_repeated_header(self, tmp_path):
+        d = tmp_path / "data"
+        d.mkdir()
+        (d / "a.csv").write_text("email\na@example.com\n")
+        (d / "b.csv").write_text("phone\n+1-555-555-5555\n")
+        result = _invoke("scan", str(d), "--format", "csv")
+        assert result.exit_code == 0
+        lines = result.output.strip().splitlines()
+        headers = [line for line in lines if line.startswith("source,file")]
+        assert len(headers) == 1, "CSV header should only appear once"
+
+    def test_directory_scan_table_output_file(self, tmp_path):
+        d = tmp_path / "data"
+        d.mkdir()
+        (d / "a.csv").write_text("email\na@example.com\n")
+        out = tmp_path / "nested" / "report.txt"
+        result = _invoke("scan", str(d), "--format", "table", "-o", str(out))
+        assert result.exit_code == 0
+        assert out.exists()
+        content = out.read_text(encoding="utf-8")
+        assert "Directory scan:" in content
+        assert "a.csv" in content
+        assert result.output == ""
+
+    def test_directory_scan_table_output_file_verbose(self, tmp_path):
+        d = tmp_path / "data"
+        d.mkdir()
+        (d / "a.csv").write_text("email\na@example.com\n")
+        out = tmp_path / "report_verbose.txt"
+        result = _invoke("scan", str(d), "--format", "table", "-v", "-o", str(out))
+        assert result.exit_code == 0
+        assert out.exists()
+        content = out.read_text(encoding="utf-8")
+        assert "Directory scan:" in content
+        assert "Findings" in content
+        assert "email" in content
+        assert result.output == ""
+
     def test_table_output(self):
         result = _invoke("scan", str(SAMPLES / "medical_notes.csv"))
         assert result.exit_code == 0
@@ -67,6 +117,31 @@ class TestScanFormats:
         lines = result.output.strip().splitlines()
         assert lines[0].startswith("source,file,column,category,detector")
         assert len(lines) >= 2
+
+    def test_sarif_output_is_valid_and_excludes_samples(self):
+        result = _invoke("scan", str(SAMPLES / "medical_notes.csv"), "--format", "sarif")
+        assert result.exit_code == 0
+        payload = json.loads(result.output)
+        assert payload["version"] == "2.1.0"
+        run = payload["runs"][0]
+        assert run["tool"]["driver"]["name"] == "piiscope"
+        assert run["results"]
+        serialized = json.dumps(payload)
+        assert "samples_redacted" not in serialized
+        assert "anna@example.com" not in serialized
+
+    def test_sarif_output_file(self, tmp_path):
+        out = tmp_path / "piiscope.sarif"
+        result = _invoke(
+            "scan",
+            str(SAMPLES / "medical_notes.csv"),
+            "--format",
+            "sarif",
+            "--output",
+            str(out),
+        )
+        assert result.exit_code == 0
+        assert json.loads(out.read_text())["runs"][0]["results"]
 
     def test_multiple_jurisdictions(self):
         result = _invoke(
@@ -123,6 +198,67 @@ class TestScanFormats:
         assert result.exit_code == 0
         payload = json.loads(out.read_text())
         assert payload["rows"] == 4
+
+    def test_multi_file_scan_json(self):
+        result = _invoke(
+            "scan",
+            str(SAMPLES / "customers.csv"),
+            str(SAMPLES / "medical_notes.csv"),
+            "--format",
+            "json",
+        )
+        assert result.exit_code == 0
+        payload = json.loads(result.output)
+        assert isinstance(payload, list)
+        assert len(payload) == 2
+        sources = [item["source"] for item in payload]
+        assert any("customers.csv" in s for s in sources)
+        assert any("medical_notes.csv" in s for s in sources)
+
+    def test_multi_file_scan_csv_no_repeated_header(self):
+        result = _invoke(
+            "scan",
+            str(SAMPLES / "customers.csv"),
+            str(SAMPLES / "medical_notes.csv"),
+            "--format",
+            "csv",
+        )
+        assert result.exit_code == 0
+        lines = result.output.strip().splitlines()
+        headers = [line for line in lines if line.startswith("source,file")]
+        assert len(headers) == 1, "CSV header should only appear once across multiple files"
+
+    def test_multi_file_scan_output_file(self, tmp_path):
+        out = tmp_path / "combined.json"
+        result = _invoke(
+            "scan",
+            str(SAMPLES / "customers.csv"),
+            str(SAMPLES / "medical_notes.csv"),
+            "--format",
+            "json",
+            "-o",
+            str(out),
+        )
+        assert result.exit_code == 0
+        assert out.exists()
+        payload = json.loads(out.read_text())
+        assert isinstance(payload, list)
+        assert len(payload) == 2
+
+    def test_multi_file_scan_fail_on(self):
+        result = _invoke(
+            "scan",
+            str(SAMPLES / "medical_notes.csv"),
+            str(SAMPLES / "customers.csv"),
+            "--fail-on",
+            "critical",
+            "--format",
+            "json",
+        )
+        assert result.exit_code == 2
+        payload = json.loads(result.output)
+        assert isinstance(payload, list)
+        assert len(payload) == 2
 
 
 class TestFailOn:
@@ -243,6 +379,50 @@ class TestRemediateCommand:
         _invoke("remediate", str(source), "--out", str(out), "--strategy", "hash")
         assert source.read_text() == "email\nsomeone@example.com\n"
 
+    def test_date_shift_strategy(self, tmp_path):
+        out = tmp_path / "safe.csv"
+        result = _invoke(
+            "remediate",
+            str(SAMPLES / "medical_notes.csv"),
+            "--out",
+            str(out),
+            "--strategy",
+            "date-shift",
+            "--shift-days",
+            "10",
+            "-c",
+            "dob",
+        )
+        assert result.exit_code == 0
+        df = pd.read_csv(out)
+        assert df["dob"].iloc[0] == "1980-01-25"
+
+    def test_generalise_strategy(self, tmp_path):
+        out = tmp_path / "safe.csv"
+        result = _invoke(
+            "remediate",
+            str(SAMPLES / "medical_notes.csv"),
+            "--out",
+            str(out),
+            "--strategy",
+            "generalise",
+            "--bucket-size",
+            "5",
+            "-c",
+            "dob",
+        )
+        assert result.exit_code == 0
+        df = pd.read_csv(out)
+        assert str(df["dob"].iloc[0]) == "1980"
+
+    def test_empty_txt_remediate(self, tmp_path):
+        source = tmp_path / "empty.txt"
+        source.write_text("")
+        out = tmp_path / "safe.txt"
+        result = _invoke("remediate", str(source), "--out", str(out), "--strategy", "hash")
+        assert result.exit_code == 0
+        assert out.read_text() == ""
+
 
 class TestErrorPaths:
     def test_missing_file(self):
@@ -287,8 +467,141 @@ class TestPatternsAndDoctor:
         # detector exists yet, so it never appears in the detector table
         assert "cpf" not in result.output
 
-    def test_doctor(self):
+    def test_doctor(self, monkeypatch):
+        import importlib.util
+
+        real_find_spec = importlib.util.find_spec
+
+        def mock_find_spec(name, *args, **kwargs):
+            if name == "spacy":
+                return None
+            return real_find_spec(name, *args, **kwargs)
+
+        monkeypatch.setattr(importlib.util, "find_spec", mock_find_spec)
         result = _invoke("doctor")
         assert result.exit_code == 0
         assert "pandas" in result.output
         assert "pyarrow" in result.output
+        assert "pip install piiscope[nlp]" in result.output
+
+    def test_doctor_disabled_pyarrow(self, monkeypatch):
+        import importlib.util
+
+        real_find_spec = importlib.util.find_spec
+
+        def mock_find_spec(name, *args, **kwargs):
+            if name == "pyarrow":
+                return None
+            return real_find_spec(name, *args, **kwargs)
+
+        monkeypatch.setattr(importlib.util, "find_spec", mock_find_spec)
+        result = _invoke("doctor")
+        assert result.exit_code == 0
+        assert "pip install piiscope[parquet]" in result.output
+
+
+class TestCustomDictionary:
+    def test_scan_with_custom_dictionary(self, tmp_path):
+        data = tmp_path / "data.csv"
+        data.write_text("name\nCustomUniquePerson\n")
+        dict_file = tmp_path / "names.txt"
+        dict_file.write_text("CustomUniquePerson\n")
+
+        baseline = _invoke("scan", str(data), "--format", "json")
+        assert baseline.exit_code == 0
+        assert json.loads(baseline.output)["findings"] == []
+
+        result = _invoke(
+            "scan",
+            str(data),
+            "--format",
+            "json",
+            "--dictionary",
+            f"given_name={dict_file}",
+        )
+        assert result.exit_code == 0
+        payload = json.loads(result.output)
+        detectors = [f["detector"] for f in payload["findings"]]
+        assert "given_name" in detectors
+
+    def test_scan_directory_with_custom_dictionary(self, tmp_path):
+        d = tmp_path / "scan_dir"
+        d.mkdir()
+        (d / "a.csv").write_text("name\nCustomUniquePerson\n")
+        dict_file = tmp_path / "names.txt"
+        dict_file.write_text("CustomUniquePerson\n")
+
+        result = _invoke(
+            "scan",
+            str(d),
+            "--format",
+            "json",
+            "--dictionary",
+            f"given_name={dict_file}",
+        )
+        assert result.exit_code == 0
+        payload = json.loads(result.output)
+        assert len(payload["files"]) == 1
+        detectors = [f["detector"] for f in payload["files"][0]["findings"]]
+        assert "given_name" in detectors
+
+    def test_scan_invalid_dictionary_format(self, tmp_path):
+        data = tmp_path / "data.csv"
+        data.write_text("name\nCustomUniquePerson\n")
+        result = _invoke("scan", str(data), "--dictionary", "invalid_format")
+        assert result.exit_code != 0
+
+    def test_scan_unknown_dictionary_key(self, tmp_path):
+        data = tmp_path / "data.csv"
+        data.write_text("name\nCustomUniquePerson\n")
+        dict_file = tmp_path / "names.txt"
+        dict_file.write_text("CustomUniquePerson\n")
+        result = _invoke("scan", str(data), "--dictionary", f"unknown_key={dict_file}")
+        assert result.exit_code != 0
+
+
+class TestReportCommand:
+    def test_report_html(self, tmp_path):
+        out = tmp_path / "report.html"
+        result = _invoke("report", str(SAMPLES / "medical_notes.csv"), "--out", str(out))
+        assert result.exit_code == 0
+        assert out.exists()
+        assert "<!DOCTYPE html>" in out.read_text()
+        assert "Report written to" in result.output
+
+    def test_report_sarif(self, tmp_path):
+        out = tmp_path / "report.sarif"
+        result = _invoke("report", str(SAMPLES / "medical_notes.csv"), "--out", str(out))
+        assert result.exit_code == 0
+        assert out.exists()
+        payload = json.loads(out.read_text())
+        assert payload["version"] == "2.1.0"
+        assert len(payload["runs"][0]["results"]) > 0
+
+    def test_report_json(self, tmp_path):
+        out = tmp_path / "report.json"
+        result = _invoke("report", str(SAMPLES / "medical_notes.csv"), "--out", str(out))
+        assert result.exit_code == 0
+        assert out.exists()
+        payload = json.loads(out.read_text())
+        assert payload["rows"] == 4
+
+    def test_report_markdown(self, tmp_path):
+        out = tmp_path / "report.md"
+        result = _invoke("report", str(SAMPLES / "medical_notes.csv"), "--out", str(out))
+        assert result.exit_code == 0
+        assert out.exists()
+        assert "piiscope report" in out.read_text()
+
+    def test_report_quiet(self, tmp_path):
+        out = tmp_path / "report.html"
+        result = _invoke("report", str(SAMPLES / "medical_notes.csv"), "--out", str(out), "--quiet")
+        assert result.exit_code == 0
+        assert out.exists()
+        assert result.output == ""
+
+    def test_report_invalid_extension(self, tmp_path):
+        out = tmp_path / "report.xyz"
+        result = _invoke("report", str(SAMPLES / "medical_notes.csv"), "--out", str(out))
+        assert result.exit_code != 0
+

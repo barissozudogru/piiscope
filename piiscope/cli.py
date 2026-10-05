@@ -28,7 +28,7 @@ from piiscope.detection.jurisdictions import JURISDICTION_PROFILES
 from piiscope.detection.regex_patterns import PATTERNS
 from piiscope.errors import PiiscopeError
 from piiscope.remediation.strategies import remediate
-from piiscope.report import render_markdown, write_report
+from piiscope.report import render_markdown, render_sarif, write_report
 from piiscope.scan import ScanResult, scan
 
 app = typer.Typer(
@@ -60,6 +60,7 @@ class OutputFormat(str, Enum):
     json = "json"
     markdown = "markdown"
     csv = "csv"
+    sarif = "sarif"
 
 
 class FailLevel(str, Enum):
@@ -94,6 +95,40 @@ def _split_csv(value: str | None) -> list[str] | None:
         return None
     parts = [p.strip() for p in value.split(",") if p.strip()]
     return parts or None
+
+
+_SUPPORTED_DICTIONARY_KEYS = (
+    "given_name",
+    "surname",
+    "hospital_keyword",
+    "drug_name",
+    "medical_condition",
+)
+
+
+def _parse_dictionaries(values: Sequence[str] | None) -> dict[str, str] | None:
+    if not values:
+        return None
+    parsed: dict[str, str] = {}
+    for item in values:
+        if "=" not in item:
+            raise PiiscopeError(
+                f"invalid dictionary '{item}'; expected KEY=FILE format "
+                "(e.g. given_name=names.txt)"
+            )
+        key, path = item.split("=", 1)
+        key = key.strip()
+        path = path.strip()
+        if not key or not path:
+            raise PiiscopeError(
+                f"invalid dictionary '{item}'; expected KEY=FILE format "
+                "(e.g. given_name=names.txt)"
+            )
+        if key not in _SUPPORTED_DICTIONARY_KEYS:
+            keys_str = ", ".join(_SUPPORTED_DICTIONARY_KEYS)
+            raise PiiscopeError(f"unknown dictionary key '{key}'; choose from {keys_str}")
+        parsed[key] = path
+    return parsed
 
 
 def _severity_style(severity: float) -> str:
@@ -230,7 +265,7 @@ def _print_table(console: Console, result: ScanResult) -> None:
     console.print()
 
 
-def _findings_csv(result: ScanResult) -> str:
+def _emit_csv(results: Sequence[ScanResult]) -> str:
     buffer = _io.StringIO()
     writer = csv.writer(buffer, lineterminator="\n")
     writer.writerow(
@@ -248,22 +283,23 @@ def _findings_csv(result: ScanResult) -> str:
             "risk_level",
         ]
     )
-    for f in result.findings:
-        writer.writerow(
-            [
-                result.source,
-                f.file or "",
-                f.column,
-                f.category,
-                f.detector,
-                f.count,
-                f.confidence,
-                f.severity,
-                " ".join(f.jurisdictions),
-                result.risk.score,
-                result.risk.level,
-            ]
-        )
+    for r in results:
+        for f in r.findings:
+            writer.writerow(
+                [
+                    r.source,
+                    f.file or "",
+                    f.column,
+                    f.category,
+                    f.detector,
+                    f.count,
+                    f.confidence,
+                    f.severity,
+                    " ".join(f.jurisdictions),
+                    r.risk.score,
+                    r.risk.level,
+                ]
+            )
     return buffer.getvalue().rstrip("\n")
 
 
@@ -284,7 +320,9 @@ def _emit(
     elif fmt == OutputFormat.markdown:
         text = "\n\n---\n\n".join(render_markdown(r) for r in results)
     elif fmt == OutputFormat.csv:
-        text = "\n".join(_findings_csv(r) for r in results)
+        text = _emit_csv(results)
+    elif fmt == OutputFormat.sarif:
+        text = render_sarif(results)
     else:
         text = None
 
@@ -373,82 +411,106 @@ def scan_cmd(
     console = Console(quiet=quiet)
     jurisdictions = _jurisdiction_values(jurisdiction)
     qi = _split_csv(quasi_identifiers)
+    custom_dicts = _parse_dictionaries(dictionary)
 
     from piiscope.io.readers import walk_directory
 
-    for p in paths:
-        if p.is_dir():
-            files = walk_directory(p)
-            file_results = [
-                scan(
-                    f,
-                    jurisdictions=jurisdictions,
-                    quasi_identifiers=qi,
-                    sample_rows=sample,
-                    include_metrics=not no_metrics,
-                    min_coverage=0.0 if show_all else 0.15,
-                )
-                for f in files
-            ]
-            if format == OutputFormat.json:
-                max_score = max((r.risk.score for r in file_results), default=0)
-                level = "low"
-                if max_score >= 75:
-                    level = "critical"
-                elif max_score >= 50:
-                    level = "high"
-                elif max_score >= 25:
-                    level = "medium"
-
-                payload = {
-                    "files": [r.to_dict() for r in file_results],
-                    "risk": {"score": max_score, "level": level, "drivers": []},
-                }
-                out_text = json.dumps(payload, indent=2)
-                if output:
-                    output.parent.mkdir(parents=True, exist_ok=True)
-                    output.write_text(out_text + "\n", encoding="utf-8")
-                else:
-                    typer.echo(out_text)
-            elif format == OutputFormat.table:
-                table = Table(
-                    title=f"Directory scan: {p}", header_style="bold", title_justify="left"
-                )
-                table.add_column("File")
-                table.add_column("Rows", justify="right")
-                table.add_column("Findings", justify="right")
-                table.add_column("Risk")
-                for r in file_results:
-                    num_findings = sum(f.count for f in r.findings)
-                    table.add_row(
-                        Path(r.source).name,
-                        str(r.rows),
-                        str(num_findings),
-                        Text(r.risk.level.upper(), style=_LEVEL_STYLES[r.risk.level]),
-                    )
-                console.print(table)
-                if verbose:
-                    for r in file_results:
-                        _print_table(console, r)
-            else:
-                _emit(console, file_results, format, output)
-
-            if fail_on is not None:
-                threshold = RANK[fail_on.value]
-                worst = max((RANK[r.risk.level] for r in file_results), default=0)
-                if worst >= threshold:
-                    raise typer.Exit(code=2)
-        else:
-            res = scan(
-                p,
+    if len(paths) == 1 and paths[0].is_dir():
+        p = paths[0]
+        files = walk_directory(p)
+        file_results = [
+            scan(
+                f,
                 jurisdictions=jurisdictions,
                 quasi_identifiers=qi,
                 sample_rows=sample,
                 include_metrics=not no_metrics,
                 min_coverage=0.0 if show_all else 0.15,
+                dictionaries=custom_dicts,
             )
-            _emit(console, [res], format, output)
-            if fail_on is not None and RANK[res.risk.level] >= RANK[fail_on.value]:
+            for f in files
+        ]
+        if format == OutputFormat.json:
+            max_score = max((r.risk.score for r in file_results), default=0)
+            level = "low"
+            if max_score >= 75:
+                level = "critical"
+            elif max_score >= 50:
+                level = "high"
+            elif max_score >= 25:
+                level = "medium"
+
+            payload = {
+                "files": [r.to_dict() for r in file_results],
+                "risk": {"score": max_score, "level": level, "drivers": []},
+            }
+            out_text = json.dumps(payload, indent=2)
+            if output:
+                output.parent.mkdir(parents=True, exist_ok=True)
+                output.write_text(out_text + "\n", encoding="utf-8")
+            else:
+                typer.echo(out_text)
+        elif format == OutputFormat.table:
+            table = Table(
+                title=f"Directory scan: {p}", header_style="bold", title_justify="left"
+            )
+            table.add_column("File")
+            table.add_column("Rows", justify="right")
+            table.add_column("Findings", justify="right")
+            table.add_column("Risk")
+            for r in file_results:
+                num_findings = sum(f.count for f in r.findings)
+                table.add_row(
+                    Path(r.source).name,
+                    str(r.rows),
+                    str(num_findings),
+                    Text(r.risk.level.upper(), style=_LEVEL_STYLES[r.risk.level]),
+                )
+            if output is not None:
+                output.parent.mkdir(parents=True, exist_ok=True)
+                file_console = Console(file=output.open("w", encoding="utf-8"), width=120)
+                file_console.print(table)
+                if verbose:
+                    for r in file_results:
+                        _print_table(file_console, r)
+                file_console.file.close()
+            else:
+                console.print(table)
+                if verbose:
+                    for r in file_results:
+                        _print_table(console, r)
+        else:
+            _emit(console, file_results, format, output)
+
+        if fail_on is not None:
+            threshold = RANK[fail_on.value]
+            worst = max((RANK[r.risk.level] for r in file_results), default=0)
+            if worst >= threshold:
+                raise typer.Exit(code=2)
+    else:
+        targets: list[Path] = []
+        for p in paths:
+            if p.is_dir():
+                targets.extend(walk_directory(p))
+            else:
+                targets.append(p)
+        file_results = [
+            scan(
+                f,
+                jurisdictions=jurisdictions,
+                quasi_identifiers=qi,
+                sample_rows=sample,
+                include_metrics=not no_metrics,
+                min_coverage=0.0 if show_all else 0.15,
+                dictionaries=custom_dicts,
+            )
+            for f in targets
+        ]
+        _emit(console, file_results, format, output)
+        if fail_on is not None:
+            threshold = RANK[fail_on.value]
+            worst = max((RANK[r.risk.level] for r in file_results), default=0)
+            if worst >= threshold:
                 raise typer.Exit(code=2)
 
 
@@ -507,7 +569,7 @@ def remediate_cmd(
 @app.command(name="report", epilog="Example: piiscope report data.csv --out scan.html")
 def report_cmd(
     path: Path = typer.Argument(..., help="File or directory to report on."),
-    out: Path = typer.Option(..., "--out", help="Report file: .html, .md or .json."),
+    out: Path = typer.Option(..., "--out", help="Report file: .html, .md, .json or .sarif."),
     jurisdiction: list[JurisdictionOpt] = typer.Option(
         ["gdpr", "ccpa", "kvkk", "lgpd"],
         "--jurisdiction",
@@ -593,10 +655,10 @@ def doctor_cmd() -> None:
 
         table.add_row("pyarrow (parquet)", "enabled", f"v{pyarrow.__version__}")
     else:
-        table.add_row("pyarrow (parquet)", "disabled", "pip install piiscope[parquet]")
+        table.add_row("pyarrow (parquet)", "disabled", Text("pip install piiscope[parquet]"))
 
     if find_spec("spacy") is None:
-        table.add_row("spacy (nlp)", "disabled", "pip install piiscope[nlp]")
+        table.add_row("spacy (nlp)", "disabled", Text("pip install piiscope[nlp]"))
     else:
         import spacy
 

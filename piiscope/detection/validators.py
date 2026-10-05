@@ -289,7 +289,7 @@ def column_name_context_boost(column_name: str, rule_id: str) -> float:
     rule is applicable. A multiplier < 1.0 downgrades confidence.
     A multiplier of 1.0 means no context signal is available.
     """
-    col_lower = column_name.lower().replace("-", "_").replace(" ", "_")
+    col_lower = str(column_name).lower().replace("-", "_").replace(" ", "_")
     # Strip common prefixes/suffixes for matching
     col_clean = col_lower
 
@@ -343,7 +343,12 @@ def column_name_context_boost(column_name: str, rule_id: str) -> float:
                 return 1.5
         return 1.0
 
-    if rule_id in ("eu_phone", "phone", "us_phone", "tr_phone"):
+    if rule_id in ("tr_phone_strict", "tr_phone"):
+        if any(word in col_clean for word in ("phone", "tel", "mobile", "fax", "gsm", "cep")):
+            return 1.5
+        return 1.0
+
+    if rule_id in ("eu_phone", "phone", "us_phone"):
         if any(word in col_clean for word in ("phone", "tel", "mobile", "fax")):
             return 1.5
         return 1.0
@@ -358,6 +363,8 @@ def column_name_context_boost(column_name: str, rule_id: str) -> float:
         for p in positive:
             if p in col_clean:
                 return 1.3
+        if any(token in col_clean for token in ("ip", "host", "version", "release", "build")):
+            return 0.2
         return 1.0
 
     if rule_id in ("swift_bic",):
@@ -368,6 +375,8 @@ def column_name_context_boost(column_name: str, rule_id: str) -> float:
     if rule_id in ("passport_tr", "passport_de", "passport_uk", "passport"):
         if "passport" in col_clean or "travel" in col_clean or "document" in col_clean:
             return 1.5
+        if any(token in col_clean for token in ("vat", "tax", "vergi")):
+            return 0.2
         return 1.0
 
     if rule_id in ("iban_tr",):
@@ -380,9 +389,5 @@ def column_name_context_boost(column_name: str, rule_id: str) -> float:
             return 1.5
         return 1.0
 
-    if rule_id in ("tr_phone_strict", "tr_phone"):
-        if "phone" in col_clean or "tel" in col_clean or "gsm" in col_clean or "cep" in col_clean:
-            return 1.5
-        return 1.0
 
     return 1.0

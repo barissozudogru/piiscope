@@ -1,19 +1,40 @@
-# piiscope
+# piiscope: PII scanner and privacy risk CLI
+Find, score and remediate personal data in files and databases without sending the data to an external service.
+
 piiscope finds personal data in your datasets and measures privacy risks across global jurisdictions. It scans tabular data or free text to locate direct identifiers and calculates k-anonymity, l-diversity and t-closeness on quasi-identifiers. It helps you remediate findings by applying strategies like hashing, generalisation or tokenisation directly to the target columns.
 
 [![CI](https://github.com/barissozudogru/piiscope/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/barissozudogru/piiscope/actions/workflows/ci.yml)
 ![PyPI Version](https://img.shields.io/pypi/v/piiscope)
+[![PyPI Downloads](https://img.shields.io/pypi/dm/piiscope)](https://pypi.org/project/piiscope/)
 ![Python Versions](https://img.shields.io/pypi/pyversions/piiscope)
 ![License](https://img.shields.io/badge/License-Apache--2.0-blue.svg)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22071807.svg)](https://doi.org/10.5281/zenodo.22071807)
+[![Benchmark Dataset](https://img.shields.io/badge/Hugging_Face-benchmark-FFD21E)](https://huggingface.co/datasets/barissozudogru/piiscope-benchmark)
+
+[Tool page](https://petri-labs.org/tools/piiscope/) · [PyPI](https://pypi.org/project/piiscope/) · [Source](https://github.com/barissozudogru/piiscope)
 
 ![piiscope demo](https://raw.githubusercontent.com/barissozudogru/piiscope/main/docs/assets/demo.gif)
 
 Install with `pip install piiscope`. Add Parquet support with `pip install "piiscope[parquet]"`, or spaCy NLP models with `pip install "piiscope[nlp]"`.
 
-Scan a file to identify privacy risks:
+Scan a file you already have:
 ```bash
+piiscope scan /path/to/your/data.csv
+```
+
+The walkthrough below uses the dataset already tracked in this repository. Clone
+the repository first if you want to reproduce it; `pip install` does not place the
+repository's `samples/` directory in your working directory.
+
+```bash
+git clone https://github.com/barissozudogru/piiscope.git
+cd piiscope
 piiscope scan samples/customers.csv
 ```
+
+<details>
+<summary>Existing dataset walkthrough and output</summary>
+
 ```text
 ╭─ piiscope scan ──────────────────────────────────────────────────────────────────────────────────╮
 │        Source  samples/customers.csv                                                             │
@@ -60,7 +81,7 @@ Findings
 Next: piiscope remediate samples/customers.csv --out samples/customers_safe.csv --strategy hash
 ```
 
-Remediate the file, then prove the output is clean:
+Remediate the file, then rescan the output for remaining detector findings. A clean detector report does not prove anonymisation or regulatory compliance:
 ```bash
 piiscope remediate samples/customers.csv --out customers_safe.csv --strategy hash
 piiscope scan customers_safe.csv
@@ -102,6 +123,11 @@ No personal data detected.
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 Nothing to remediate.
 ```
+
+</details>
+
+If this saves you time, consider [starring the repository](https://github.com/barissozudogru/piiscope). It helps other developers find it.
+
 Scan a file and get the risk score in JSON:
 ```bash
 piiscope scan samples/customers.csv --format json | jq '.risk'
@@ -127,6 +153,54 @@ steps:
   - run: pip install piiscope
   - run: piiscope scan data/ --fail-on high
 ```
+
+The repository also ships a reusable GitHub Action:
+
+```yaml
+name: Privacy scan
+
+on: [pull_request]
+
+jobs:
+  piiscope:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: barissozudogru/piiscope@v1.3.0
+        with:
+          path: data/
+          fail-on: high
+```
+
+The action writes a SARIF artifact path to its outputs. It does not include matched or redacted sample values.
+
+Generate SARIF directly from the CLI:
+
+```bash
+piiscope scan data/ --format sarif --output piiscope.sarif
+```
+
+## Reproducible benchmark
+
+The [Piiscope Structured PII Pattern Benchmark](https://huggingface.co/datasets/barissozudogru/piiscope-benchmark)
+contains 512 deterministic positive and hard-negative cases across English,
+German, Turkish, and Portuguese contexts. Every value is synthetic, reserved
+for documentation, or a published test credential. It contains no records
+collected from people.
+
+Reproduce the checked-in evaluation:
+
+```bash
+python benchmarks/piiscope-benchmark/generate.py
+python benchmarks/piiscope-benchmark/evaluate.py
+```
+
+Version 1.3.0 reaches 1.000 micro precision, recall, exact multi-label match,
+and hard-negative pass rate on this structured-pattern benchmark. Version 1.2.0
+is included as a baseline. The benchmark does not measure real-world prevalence,
+demographic fairness, or multilingual named-entity recall.
 
 ## Python API
 Call the scan and remediate functions directly in Python:
@@ -185,7 +259,7 @@ Transform findings with one of the following methods:
 - `redact`: Keep the first and last characters and mask the middle.
 - `null`: Empty string.
 - `generalise`: Numbers become ranges, dates become years, everything else is redacted.
-- `tokenise`: Salted hash pseudonym (reversible if you keep the salt).
+- `tokenise`: One-way salted hash pseudonym that stays stable when the same salt is reused.
 - `date-shift`: Shift dates by a fixed number of days.
 
 ## Reports
@@ -220,4 +294,25 @@ Access the UI at `http://localhost:3000` and API docs at `http://localhost:8000/
 Contributions are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md) for the development workflow and guidelines. For reporting vulnerabilities, check [SECURITY.md](SECURITY.md).
 Licensed under the [Apache 2.0 License](LICENSE).
 
-**Data handling:** All scans execute completely locally. No data is sent to external servers, and samples included in reports are partially redacted to prevent leakage.
+**Data handling:** Scans run locally. Reports can include partially redacted samples; treat report files as sensitive and review their contents before sharing them.
+
+## Citation
+
+If you use piiscope in academic work, please cite it. The concept DOI below always
+resolves to the latest archived version. The archived v1.1.1 snapshot is distinct
+from the current source and package version; use its version DOI only when citing
+that snapshot.
+
+- Concept DOI (all versions): [10.5281/zenodo.22071806](https://doi.org/10.5281/zenodo.22071806)
+- Archived v1.1.1 snapshot: [10.5281/zenodo.22071807](https://doi.org/10.5281/zenodo.22071807)
+
+```bibtex
+@software{sozudogru_piiscope,
+  author  = {Sozudogru, Baris},
+  title   = {piiscope: find, score and remediate personal data in files and databases},
+  version = {1.3.0},
+  doi     = {10.5281/zenodo.22071806},
+  url     = {https://github.com/barissozudogru/piiscope},
+  year    = {2026}
+}
+```

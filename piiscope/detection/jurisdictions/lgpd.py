@@ -291,6 +291,17 @@ PROFILE: dict[str, dict[str, Any]] = {
         "legal_basis": ["legal_obligation", "consent"],
         "data_subject_rights": ["access", "correction", "deletion"],
     },
+    "tc_kimlik": {
+        "status": "required",
+        "severity": 0.8,
+        "article": "Art. 5(I), Art. 46",
+        "obligation": (
+            "National ID numbers are personal data requiring a legal basis "
+            "and adequate security measures under Art. 46."
+        ),
+        "legal_basis": ["legal_obligation", "consent"],
+        "data_subject_rights": ["access", "correction", "deletion"],
+    },
     # ------------------------------------------------------------------
     # Sensitive personal data  (Art. 5(II), Art. 11)
     # Categories: racial/ethnic origin, religious belief, political

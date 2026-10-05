@@ -139,3 +139,143 @@ def test_remediated_output_matches_extension(tmp_path):
     lines = out.read_text().strip().splitlines()
     assert len(lines) == 2
     assert '"email"' in lines[0]
+
+
+def test_remediate_json_with_null_values(tmp_path):
+    source = tmp_path / "in.json"
+    source.write_text('[{"email": "test@example.com"}, {"email": null}]')
+    out = tmp_path / "out.json"
+    result = remediate(source, out, strategy="hash", columns=["email"])
+    assert result.columns_changed == {"email": 1}
+    frame = pd.read_json(out)
+    assert frame["email"].iloc[0] != ""
+    assert frame["email"].iloc[1] == ""
+
+
+def test_remediate_parquet_with_null_values(tmp_path):
+    pytest.importorskip("pyarrow")
+    source = tmp_path / "in.parquet"
+    pd.DataFrame({"email": ["test@example.com", None]}).to_parquet(source)
+    out = tmp_path / "out.parquet"
+    result = remediate(source, out, strategy="hash", columns=["email"])
+    assert result.columns_changed == {"email": 1}
+    frame = pd.read_parquet(out)
+    assert frame["email"].iloc[0] != ""
+    assert frame["email"].iloc[1] == ""
+
+
+def test_generalise_handles_nan_and_non_finite_values():
+    frame = pd.DataFrame({"age": ["25", "nan", "inf", ""]})
+    changed, _ = apply_strategy(frame, strategy="generalise", columns=["age"], bucket_size=10)
+    assert changed["age"] == 3
+    assert frame["age"].iloc[0] == "20-29"
+    assert frame["age"].iloc[1] == "n*n"
+    assert frame["age"].iloc[2] == "i*f"
+    assert frame["age"].iloc[3] == ""
+
+
+def test_remediate_dataframe_with_integer_columns(tmp_path):
+    df = pd.DataFrame([["alice@example.com", "4111111111111111"]])
+    out = tmp_path / "out.csv"
+    res = remediate(df, out, strategy="hash")
+    assert res.rows == 1
+    assert "0" in res.columns_changed
+    assert "1" in res.columns_changed
+    assert list(df.columns) == [0, 1]
+    assert all(isinstance(c, int) for c in df.columns)
+    remediated = pd.read_csv(out)
+    assert remediated["0"].iloc[0] != "alice@example.com"
+    assert "@" not in remediated["0"].iloc[0]
+
+
+def test_remediate_frame_preserves_non_string_column_names():
+    df = pd.DataFrame([["alice@example.com", "4111111111111111"]])
+    assert list(df.columns) == [0, 1]
+    assert all(isinstance(c, int) for c in df.columns)
+
+    changed, _ = remediate_frame(df, strategy="hash")
+
+    assert list(df.columns) == [0, 1]
+    assert all(isinstance(c, int) for c in df.columns)
+    assert "0" in changed
+    assert "1" in changed
+    assert df[0].iloc[0] != "alice@example.com"
+    assert "@" not in df[0].iloc[0]
+    assert df[1].iloc[0] != "4111111111111111"
+
+    df_explicit = pd.DataFrame([["alice@example.com", "4111111111111111"]])
+    changed_explicit, _ = remediate_frame(df_explicit, strategy="hash", columns=[0])
+    assert list(df_explicit.columns) == [0, 1]
+    assert all(isinstance(c, int) for c in df_explicit.columns)
+    assert changed_explicit == {"0": 1}
+    assert df_explicit[0].iloc[0] != "alice@example.com"
+    assert df_explicit[1].iloc[0] == "4111111111111111"
+
+    df_str_cols = pd.DataFrame([["alice@example.com", "4111111111111111"]])
+    changed_str_cols, _ = remediate_frame(df_str_cols, strategy="hash", columns=["1"])
+    assert list(df_str_cols.columns) == [0, 1]
+    assert all(isinstance(c, int) for c in df_str_cols.columns)
+    assert changed_str_cols == {"1": 1}
+    assert df_str_cols[1].iloc[0] != "4111111111111111"
+
+
+def test_apply_strategy_flexible_column_matching():
+    # Integer columns with string column specifications
+    df_int = pd.DataFrame([["alice@example.com", "4111111111111111"]])
+    changed, _ = apply_strategy(df_int, strategy="hash", columns=["0", "1"])
+    assert list(df_int.columns) == [0, 1]
+    assert all(isinstance(c, int) for c in df_int.columns)
+    assert changed == {"0": 1, "1": 1}
+    assert df_int[0].iloc[0] != "alice@example.com"
+
+    # String columns with integer column specifications
+    df_str = pd.DataFrame({"0": ["alice@example.com"], "1": ["4111111111111111"]})
+    changed, _ = apply_strategy(df_str, strategy="hash", columns=[0, 1])
+    assert list(df_str.columns) == ["0", "1"]
+    assert changed == {"0": 1, "1": 1}
+    assert df_str["0"].iloc[0] != "alice@example.com"
+
+    # Integer columns with integer column specifications
+    df_int2 = pd.DataFrame([["alice@example.com", "4111111111111111"]])
+    changed, _ = apply_strategy(df_int2, strategy="hash", columns=[0, 1])
+    assert list(df_int2.columns) == [0, 1]
+    assert changed == {"0": 1, "1": 1}
+    assert df_int2[0].iloc[0] != "alice@example.com"
+
+
+def test_remediate_dataframe_normalizes_columns_to_strings(tmp_path):
+    df = pd.DataFrame([["alice@example.com", "4111111111111111"]])
+    out = tmp_path / "out.csv"
+    res = remediate(df, out, strategy="hash")
+    assert res.rows == 1
+    assert "0" in res.columns_changed
+    assert "1" in res.columns_changed
+    assert list(df.columns) == [0, 1]
+    assert all(isinstance(c, int) for c in df.columns)
+    remediated = pd.read_csv(out)
+    assert list(remediated.columns) == ["0", "1"]
+    assert all(isinstance(c, str) for c in remediated.columns)
+
+
+def test_remediate_dataframe_with_negative_integer_column(tmp_path):
+    df = pd.DataFrame([["alice@example.com"]])
+    df.columns = [-1]
+    out = tmp_path / "out.csv"
+    res = remediate(df, out, strategy="hash")
+    assert "-1" in res.columns_changed
+    assert list(df.columns) == [-1]
+    assert pd.api.types.is_integer_dtype(df.columns)
+    remediated = pd.read_csv(out)
+    assert list(remediated.columns) == ["-1"]
+    assert remediated["-1"].iloc[0] != "alice@example.com"
+
+
+def test_remediate_frame_with_negative_integer_column():
+    df = pd.DataFrame([["alice@example.com"]])
+    df.columns = [-1]
+    changed, _ = remediate_frame(df, strategy="hash")
+    assert list(df.columns) == [-1]
+    assert pd.api.types.is_integer_dtype(df.columns)
+    assert changed == {"-1": 1}
+    assert df[-1].iloc[0] != "alice@example.com"
+

@@ -1,0 +1,1293 @@
+{
+  "benchmark": "barissozudogru/piiscope-benchmark",
+  "benchmark_scope": "structured pattern detection with dictionaries disabled",
+  "counts": {
+    "exact_matches": 384,
+    "false_negative": 16,
+    "false_positive": 112,
+    "true_positive": 432
+  },
+  "failures": [
+    {
+      "expected": [
+        "us_phone"
+      ],
+      "family": "us_phone",
+      "id": "pb-005-01",
+      "predicted": [
+        "tr_phone",
+        "us_phone"
+      ]
+    },
+    {
+      "expected": [
+        "us_phone"
+      ],
+      "family": "us_phone",
+      "id": "pb-005-02",
+      "predicted": [
+        "tr_phone",
+        "us_phone"
+      ]
+    },
+    {
+      "expected": [
+        "us_phone"
+      ],
+      "family": "us_phone",
+      "id": "pb-005-03",
+      "predicted": [
+        "tr_phone",
+        "us_phone"
+      ]
+    },
+    {
+      "expected": [
+        "us_phone"
+      ],
+      "family": "us_phone",
+      "id": "pb-005-04",
+      "predicted": [
+        "tr_phone",
+        "us_phone"
+      ]
+    },
+    {
+      "expected": [
+        "us_phone"
+      ],
+      "family": "us_phone",
+      "id": "pb-005-05",
+      "predicted": [
+        "tr_phone",
+        "us_phone"
+      ]
+    },
+    {
+      "expected": [
+        "us_phone"
+      ],
+      "family": "us_phone",
+      "id": "pb-005-06",
+      "predicted": [
+        "tr_phone",
+        "us_phone"
+      ]
+    },
+    {
+      "expected": [
+        "us_phone"
+      ],
+      "family": "us_phone",
+      "id": "pb-005-07",
+      "predicted": [
+        "tr_phone",
+        "us_phone"
+      ]
+    },
+    {
+      "expected": [
+        "us_phone"
+      ],
+      "family": "us_phone",
+      "id": "pb-005-08",
+      "predicted": [
+        "tr_phone",
+        "us_phone"
+      ]
+    },
+    {
+      "expected": [
+        "us_phone"
+      ],
+      "family": "us_phone",
+      "id": "pb-005-09",
+      "predicted": [
+        "tr_phone",
+        "us_phone"
+      ]
+    },
+    {
+      "expected": [
+        "us_phone"
+      ],
+      "family": "us_phone",
+      "id": "pb-005-10",
+      "predicted": [
+        "tr_phone",
+        "us_phone"
+      ]
+    },
+    {
+      "expected": [
+        "us_phone"
+      ],
+      "family": "us_phone",
+      "id": "pb-005-11",
+      "predicted": [
+        "tr_phone",
+        "us_phone"
+      ]
+    },
+    {
+      "expected": [
+        "us_phone"
+      ],
+      "family": "us_phone",
+      "id": "pb-005-12",
+      "predicted": [
+        "tr_phone",
+        "us_phone"
+      ]
+    },
+    {
+      "expected": [
+        "us_phone"
+      ],
+      "family": "us_phone",
+      "id": "pb-005-13",
+      "predicted": [
+        "tr_phone",
+        "us_phone"
+      ]
+    },
+    {
+      "expected": [
+        "us_phone"
+      ],
+      "family": "us_phone",
+      "id": "pb-005-14",
+      "predicted": [
+        "tr_phone",
+        "us_phone"
+      ]
+    },
+    {
+      "expected": [
+        "us_phone"
+      ],
+      "family": "us_phone",
+      "id": "pb-005-15",
+      "predicted": [
+        "tr_phone",
+        "us_phone"
+      ]
+    },
+    {
+      "expected": [
+        "us_phone"
+      ],
+      "family": "us_phone",
+      "id": "pb-005-16",
+      "predicted": [
+        "tr_phone",
+        "us_phone"
+      ]
+    },
+    {
+      "expected": [
+        "eu_phone"
+      ],
+      "family": "eu_phone",
+      "id": "pb-006-01",
+      "predicted": []
+    },
+    {
+      "expected": [
+        "eu_phone"
+      ],
+      "family": "eu_phone",
+      "id": "pb-006-02",
+      "predicted": []
+    },
+    {
+      "expected": [
+        "eu_phone"
+      ],
+      "family": "eu_phone",
+      "id": "pb-006-03",
+      "predicted": []
+    },
+    {
+      "expected": [
+        "eu_phone"
+      ],
+      "family": "eu_phone",
+      "id": "pb-006-04",
+      "predicted": []
+    },
+    {
+      "expected": [
+        "eu_phone"
+      ],
+      "family": "eu_phone",
+      "id": "pb-006-05",
+      "predicted": []
+    },
+    {
+      "expected": [
+        "eu_phone"
+      ],
+      "family": "eu_phone",
+      "id": "pb-006-06",
+      "predicted": []
+    },
+    {
+      "expected": [
+        "eu_phone"
+      ],
+      "family": "eu_phone",
+      "id": "pb-006-07",
+      "predicted": []
+    },
+    {
+      "expected": [
+        "eu_phone"
+      ],
+      "family": "eu_phone",
+      "id": "pb-006-08",
+      "predicted": []
+    },
+    {
+      "expected": [
+        "eu_phone"
+      ],
+      "family": "eu_phone",
+      "id": "pb-006-09",
+      "predicted": []
+    },
+    {
+      "expected": [
+        "eu_phone"
+      ],
+      "family": "eu_phone",
+      "id": "pb-006-10",
+      "predicted": []
+    },
+    {
+      "expected": [
+        "eu_phone"
+      ],
+      "family": "eu_phone",
+      "id": "pb-006-11",
+      "predicted": []
+    },
+    {
+      "expected": [
+        "eu_phone"
+      ],
+      "family": "eu_phone",
+      "id": "pb-006-12",
+      "predicted": []
+    },
+    {
+      "expected": [
+        "eu_phone"
+      ],
+      "family": "eu_phone",
+      "id": "pb-006-13",
+      "predicted": []
+    },
+    {
+      "expected": [
+        "eu_phone"
+      ],
+      "family": "eu_phone",
+      "id": "pb-006-14",
+      "predicted": []
+    },
+    {
+      "expected": [
+        "eu_phone"
+      ],
+      "family": "eu_phone",
+      "id": "pb-006-15",
+      "predicted": []
+    },
+    {
+      "expected": [
+        "eu_phone"
+      ],
+      "family": "eu_phone",
+      "id": "pb-006-16",
+      "predicted": []
+    },
+    {
+      "expected": [
+        "ipv4_address"
+      ],
+      "family": "ipv4_address",
+      "id": "pb-008-01",
+      "predicted": [
+        "date",
+        "ipv4_address"
+      ]
+    },
+    {
+      "expected": [
+        "ipv4_address"
+      ],
+      "family": "ipv4_address",
+      "id": "pb-008-02",
+      "predicted": [
+        "date",
+        "ipv4_address"
+      ]
+    },
+    {
+      "expected": [
+        "ipv4_address"
+      ],
+      "family": "ipv4_address",
+      "id": "pb-008-03",
+      "predicted": [
+        "date",
+        "ipv4_address"
+      ]
+    },
+    {
+      "expected": [
+        "ipv4_address"
+      ],
+      "family": "ipv4_address",
+      "id": "pb-008-04",
+      "predicted": [
+        "date",
+        "ipv4_address"
+      ]
+    },
+    {
+      "expected": [
+        "ipv4_address"
+      ],
+      "family": "ipv4_address",
+      "id": "pb-008-05",
+      "predicted": [
+        "date",
+        "ipv4_address"
+      ]
+    },
+    {
+      "expected": [
+        "ipv4_address"
+      ],
+      "family": "ipv4_address",
+      "id": "pb-008-06",
+      "predicted": [
+        "date",
+        "ipv4_address"
+      ]
+    },
+    {
+      "expected": [
+        "ipv4_address"
+      ],
+      "family": "ipv4_address",
+      "id": "pb-008-07",
+      "predicted": [
+        "date",
+        "ipv4_address"
+      ]
+    },
+    {
+      "expected": [
+        "ipv4_address"
+      ],
+      "family": "ipv4_address",
+      "id": "pb-008-08",
+      "predicted": [
+        "date",
+        "ipv4_address"
+      ]
+    },
+    {
+      "expected": [
+        "ipv4_address"
+      ],
+      "family": "ipv4_address",
+      "id": "pb-008-09",
+      "predicted": [
+        "date",
+        "ipv4_address"
+      ]
+    },
+    {
+      "expected": [
+        "ipv4_address"
+      ],
+      "family": "ipv4_address",
+      "id": "pb-008-10",
+      "predicted": [
+        "date",
+        "ipv4_address"
+      ]
+    },
+    {
+      "expected": [
+        "ipv4_address"
+      ],
+      "family": "ipv4_address",
+      "id": "pb-008-11",
+      "predicted": [
+        "date",
+        "ipv4_address"
+      ]
+    },
+    {
+      "expected": [
+        "ipv4_address"
+      ],
+      "family": "ipv4_address",
+      "id": "pb-008-12",
+      "predicted": [
+        "date",
+        "ipv4_address"
+      ]
+    },
+    {
+      "expected": [
+        "ipv4_address"
+      ],
+      "family": "ipv4_address",
+      "id": "pb-008-13",
+      "predicted": [
+        "date",
+        "ipv4_address"
+      ]
+    },
+    {
+      "expected": [
+        "ipv4_address"
+      ],
+      "family": "ipv4_address",
+      "id": "pb-008-14",
+      "predicted": [
+        "date",
+        "ipv4_address"
+      ]
+    },
+    {
+      "expected": [
+        "ipv4_address"
+      ],
+      "family": "ipv4_address",
+      "id": "pb-008-15",
+      "predicted": [
+        "date",
+        "ipv4_address"
+      ]
+    },
+    {
+      "expected": [
+        "ipv4_address"
+      ],
+      "family": "ipv4_address",
+      "id": "pb-008-16",
+      "predicted": [
+        "date",
+        "ipv4_address"
+      ]
+    },
+    {
+      "expected": [
+        "vat",
+        "vat_de"
+      ],
+      "family": "vat_de",
+      "id": "pb-010-01",
+      "predicted": [
+        "passport",
+        "vat",
+        "vat_de"
+      ]
+    },
+    {
+      "expected": [
+        "vat",
+        "vat_de"
+      ],
+      "family": "vat_de",
+      "id": "pb-010-02",
+      "predicted": [
+        "passport",
+        "vat",
+        "vat_de"
+      ]
+    },
+    {
+      "expected": [
+        "vat",
+        "vat_de"
+      ],
+      "family": "vat_de",
+      "id": "pb-010-03",
+      "predicted": [
+        "passport",
+        "vat",
+        "vat_de"
+      ]
+    },
+    {
+      "expected": [
+        "vat",
+        "vat_de"
+      ],
+      "family": "vat_de",
+      "id": "pb-010-04",
+      "predicted": [
+        "passport",
+        "vat",
+        "vat_de"
+      ]
+    },
+    {
+      "expected": [
+        "vat",
+        "vat_de"
+      ],
+      "family": "vat_de",
+      "id": "pb-010-05",
+      "predicted": [
+        "passport",
+        "vat",
+        "vat_de"
+      ]
+    },
+    {
+      "expected": [
+        "vat",
+        "vat_de"
+      ],
+      "family": "vat_de",
+      "id": "pb-010-06",
+      "predicted": [
+        "passport",
+        "vat",
+        "vat_de"
+      ]
+    },
+    {
+      "expected": [
+        "vat",
+        "vat_de"
+      ],
+      "family": "vat_de",
+      "id": "pb-010-07",
+      "predicted": [
+        "passport",
+        "vat",
+        "vat_de"
+      ]
+    },
+    {
+      "expected": [
+        "vat",
+        "vat_de"
+      ],
+      "family": "vat_de",
+      "id": "pb-010-08",
+      "predicted": [
+        "passport",
+        "vat",
+        "vat_de"
+      ]
+    },
+    {
+      "expected": [
+        "vat",
+        "vat_de"
+      ],
+      "family": "vat_de",
+      "id": "pb-010-09",
+      "predicted": [
+        "passport",
+        "vat",
+        "vat_de"
+      ]
+    },
+    {
+      "expected": [
+        "vat",
+        "vat_de"
+      ],
+      "family": "vat_de",
+      "id": "pb-010-10",
+      "predicted": [
+        "passport",
+        "vat",
+        "vat_de"
+      ]
+    },
+    {
+      "expected": [
+        "vat",
+        "vat_de"
+      ],
+      "family": "vat_de",
+      "id": "pb-010-11",
+      "predicted": [
+        "passport",
+        "vat",
+        "vat_de"
+      ]
+    },
+    {
+      "expected": [
+        "vat",
+        "vat_de"
+      ],
+      "family": "vat_de",
+      "id": "pb-010-12",
+      "predicted": [
+        "passport",
+        "vat",
+        "vat_de"
+      ]
+    },
+    {
+      "expected": [
+        "vat",
+        "vat_de"
+      ],
+      "family": "vat_de",
+      "id": "pb-010-13",
+      "predicted": [
+        "passport",
+        "vat",
+        "vat_de"
+      ]
+    },
+    {
+      "expected": [
+        "vat",
+        "vat_de"
+      ],
+      "family": "vat_de",
+      "id": "pb-010-14",
+      "predicted": [
+        "passport",
+        "vat",
+        "vat_de"
+      ]
+    },
+    {
+      "expected": [
+        "vat",
+        "vat_de"
+      ],
+      "family": "vat_de",
+      "id": "pb-010-15",
+      "predicted": [
+        "passport",
+        "vat",
+        "vat_de"
+      ]
+    },
+    {
+      "expected": [
+        "vat",
+        "vat_de"
+      ],
+      "family": "vat_de",
+      "id": "pb-010-16",
+      "predicted": [
+        "passport",
+        "vat",
+        "vat_de"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "ipv4_out_of_range",
+      "id": "pb-023-01",
+      "predicted": [
+        "date"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "ipv4_out_of_range",
+      "id": "pb-023-02",
+      "predicted": [
+        "date"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "ipv4_out_of_range",
+      "id": "pb-023-03",
+      "predicted": [
+        "date"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "ipv4_out_of_range",
+      "id": "pb-023-04",
+      "predicted": [
+        "date"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "ipv4_out_of_range",
+      "id": "pb-023-05",
+      "predicted": [
+        "date"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "ipv4_out_of_range",
+      "id": "pb-023-06",
+      "predicted": [
+        "date"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "ipv4_out_of_range",
+      "id": "pb-023-07",
+      "predicted": [
+        "date"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "ipv4_out_of_range",
+      "id": "pb-023-08",
+      "predicted": [
+        "date"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "ipv4_out_of_range",
+      "id": "pb-023-09",
+      "predicted": [
+        "date"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "ipv4_out_of_range",
+      "id": "pb-023-10",
+      "predicted": [
+        "date"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "ipv4_out_of_range",
+      "id": "pb-023-11",
+      "predicted": [
+        "date"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "ipv4_out_of_range",
+      "id": "pb-023-12",
+      "predicted": [
+        "date"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "ipv4_out_of_range",
+      "id": "pb-023-13",
+      "predicted": [
+        "date"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "ipv4_out_of_range",
+      "id": "pb-023-14",
+      "predicted": [
+        "date"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "ipv4_out_of_range",
+      "id": "pb-023-15",
+      "predicted": [
+        "date"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "ipv4_out_of_range",
+      "id": "pb-023-16",
+      "predicted": [
+        "date"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "ipv6_invalid",
+      "id": "pb-024-01",
+      "predicted": [
+        "ipv6_address"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "ipv6_invalid",
+      "id": "pb-024-02",
+      "predicted": [
+        "ipv6_address"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "ipv6_invalid",
+      "id": "pb-024-03",
+      "predicted": [
+        "ipv6_address"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "ipv6_invalid",
+      "id": "pb-024-04",
+      "predicted": [
+        "ipv6_address"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "ipv6_invalid",
+      "id": "pb-024-05",
+      "predicted": [
+        "ipv6_address"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "ipv6_invalid",
+      "id": "pb-024-06",
+      "predicted": [
+        "ipv6_address"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "ipv6_invalid",
+      "id": "pb-024-07",
+      "predicted": [
+        "ipv6_address"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "ipv6_invalid",
+      "id": "pb-024-08",
+      "predicted": [
+        "ipv6_address"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "ipv6_invalid",
+      "id": "pb-024-09",
+      "predicted": [
+        "ipv6_address"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "ipv6_invalid",
+      "id": "pb-024-10",
+      "predicted": [
+        "ipv6_address"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "ipv6_invalid",
+      "id": "pb-024-11",
+      "predicted": [
+        "ipv6_address"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "ipv6_invalid",
+      "id": "pb-024-12",
+      "predicted": [
+        "ipv6_address"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "ipv6_invalid",
+      "id": "pb-024-13",
+      "predicted": [
+        "ipv6_address"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "ipv6_invalid",
+      "id": "pb-024-14",
+      "predicted": [
+        "ipv6_address"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "ipv6_invalid",
+      "id": "pb-024-15",
+      "predicted": [
+        "ipv6_address"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "ipv6_invalid",
+      "id": "pb-024-16",
+      "predicted": [
+        "ipv6_address"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "vat_lowercase",
+      "id": "pb-025-01",
+      "predicted": [
+        "passport"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "vat_lowercase",
+      "id": "pb-025-02",
+      "predicted": [
+        "passport"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "vat_lowercase",
+      "id": "pb-025-03",
+      "predicted": [
+        "passport"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "vat_lowercase",
+      "id": "pb-025-04",
+      "predicted": [
+        "passport"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "vat_lowercase",
+      "id": "pb-025-05",
+      "predicted": [
+        "passport"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "vat_lowercase",
+      "id": "pb-025-06",
+      "predicted": [
+        "passport"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "vat_lowercase",
+      "id": "pb-025-07",
+      "predicted": [
+        "passport"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "vat_lowercase",
+      "id": "pb-025-08",
+      "predicted": [
+        "passport"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "vat_lowercase",
+      "id": "pb-025-09",
+      "predicted": [
+        "passport"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "vat_lowercase",
+      "id": "pb-025-10",
+      "predicted": [
+        "passport"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "vat_lowercase",
+      "id": "pb-025-11",
+      "predicted": [
+        "passport"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "vat_lowercase",
+      "id": "pb-025-12",
+      "predicted": [
+        "passport"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "vat_lowercase",
+      "id": "pb-025-13",
+      "predicted": [
+        "passport"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "vat_lowercase",
+      "id": "pb-025-14",
+      "predicted": [
+        "passport"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "vat_lowercase",
+      "id": "pb-025-15",
+      "predicted": [
+        "passport"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "vat_lowercase",
+      "id": "pb-025-16",
+      "predicted": [
+        "passport"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "passport_lowercase",
+      "id": "pb-029-01",
+      "predicted": [
+        "passport"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "passport_lowercase",
+      "id": "pb-029-02",
+      "predicted": [
+        "passport"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "passport_lowercase",
+      "id": "pb-029-03",
+      "predicted": [
+        "passport"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "passport_lowercase",
+      "id": "pb-029-04",
+      "predicted": [
+        "passport"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "passport_lowercase",
+      "id": "pb-029-05",
+      "predicted": [
+        "passport"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "passport_lowercase",
+      "id": "pb-029-06",
+      "predicted": [
+        "passport"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "passport_lowercase",
+      "id": "pb-029-07",
+      "predicted": [
+        "passport"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "passport_lowercase",
+      "id": "pb-029-08",
+      "predicted": [
+        "passport"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "passport_lowercase",
+      "id": "pb-029-09",
+      "predicted": [
+        "passport"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "passport_lowercase",
+      "id": "pb-029-10",
+      "predicted": [
+        "passport"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "passport_lowercase",
+      "id": "pb-029-11",
+      "predicted": [
+        "passport"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "passport_lowercase",
+      "id": "pb-029-12",
+      "predicted": [
+        "passport"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "passport_lowercase",
+      "id": "pb-029-13",
+      "predicted": [
+        "passport"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "passport_lowercase",
+      "id": "pb-029-14",
+      "predicted": [
+        "passport"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "passport_lowercase",
+      "id": "pb-029-15",
+      "predicted": [
+        "passport"
+      ]
+    },
+    {
+      "expected": [],
+      "family": "passport_lowercase",
+      "id": "pb-029-16",
+      "predicted": [
+        "passport"
+      ]
+    }
+  ],
+  "hard_negative_rows": 224,
+  "metrics": {
+    "exact_match_rate": 0.75,
+    "hard_negative_pass_rate": 0.7143,
+    "micro_f1": 0.871,
+    "micro_precision": 0.7941,
+    "micro_recall": 0.9643
+  },
+  "per_rule": {
+    "credit_card": {
+      "true_positive": 16
+    },
+    "date": {
+      "false_positive": 32,
+      "true_positive": 16
+    },
+    "email": {
+      "true_positive": 16
+    },
+    "eu_phone": {
+      "false_negative": 16,
+      "true_positive": 16
+    },
+    "iban": {
+      "true_positive": 32
+    },
+    "iban_tr": {
+      "true_positive": 16
+    },
+    "ipv4_address": {
+      "true_positive": 16
+    },
+    "ipv6_address": {
+      "false_positive": 16,
+      "true_positive": 16
+    },
+    "medical_record": {
+      "true_positive": 16
+    },
+    "national_id": {
+      "true_positive": 32
+    },
+    "passport": {
+      "false_positive": 48,
+      "true_positive": 48
+    },
+    "passport_de": {
+      "true_positive": 32
+    },
+    "passport_tr": {
+      "true_positive": 16
+    },
+    "passport_uk": {
+      "true_positive": 16
+    },
+    "swift_bic": {
+      "true_positive": 16
+    },
+    "tr_phone": {
+      "false_positive": 16,
+      "true_positive": 16
+    },
+    "tr_phone_strict": {
+      "true_positive": 16
+    },
+    "url": {
+      "true_positive": 16
+    },
+    "us_phone": {
+      "true_positive": 16
+    },
+    "vat": {
+      "true_positive": 32
+    },
+    "vat_de": {
+      "true_positive": 16
+    }
+  },
+  "piiscope_version": "1.2.0",
+  "positive_rows": 288,
+  "rows": 512
+}

@@ -21,6 +21,7 @@ from piiscope.detection.validators import (
     tc_kimlik_check,
 )
 from piiscope.metrics.metrics import (
+    _MASKING_RECOMMENDATIONS,
     compute_k_anonymity,
     compute_l_diversity,
     compute_reidentification_risk,
@@ -193,9 +194,25 @@ class TestColumnNameContext:
         mult = column_name_context_boost("phone_number", "eu_phone")
         assert mult > 1.0
 
+    def test_tr_phone_in_turkish_context_boosts(self):
+        assert column_name_context_boost("gsm", "tr_phone") == 1.5
+        assert column_name_context_boost("cep", "tr_phone") == 1.5
+        assert column_name_context_boost("cep_telefonu", "tr_phone") == 1.5
+        assert column_name_context_boost("gsm_no", "tr_phone") == 1.5
+        assert column_name_context_boost("phone_number", "tr_phone") == 1.5
+        assert column_name_context_boost("gsm", "tr_phone_strict") == 1.5
+        assert column_name_context_boost("cep", "tr_phone_strict") == 1.5
+        assert column_name_context_boost("unrelated_col", "tr_phone") == 1.0
+
     def test_neutral_column_returns_one(self):
         mult = column_name_context_boost("data", "email")
         assert mult == 1.0
+
+    def test_non_string_column_name_returns_one(self):
+        mult = column_name_context_boost(0, "email")
+        assert mult == 1.0
+        mult_name = column_name_context_boost(1, "given_name")
+        assert mult_name == 1.0
 
 
 # ============================================================================
@@ -223,11 +240,20 @@ class TestPatterns:
     def test_ipv6_matches_full(self):
         assert PATTERNS["ipv6_address"].pattern.search("2001:0db8:85a3:0000:0000:8a2e:0370:7334")
 
+    def test_ipv6_does_not_match_valid_prefix_of_invalid_address(self):
+        assert not PATTERNS["ipv6_address"].pattern.search("2001:db8:zzzz::42")
+
     def test_medical_record_matches(self):
         assert PATTERNS["medical_record"].pattern.search("MRN: 1234567")
 
     def test_tr_phone_matches(self):
         assert PATTERNS["tr_phone"].pattern.search("+90 532 123 4567")
+
+    def test_tr_phone_does_not_match_us_number(self):
+        assert not PATTERNS["tr_phone"].pattern.search("+1 212-555-0100")
+
+    def test_eu_phone_matches_leading_plus(self):
+        assert PATTERNS["eu_phone"].pattern.search("+44 7700 900123")
 
     def test_us_phone_matches(self):
         assert PATTERNS["us_phone"].pattern.search("(212) 555-1234")
@@ -238,6 +264,9 @@ class TestPatterns:
     def test_vat_does_not_match_non_eu_prefix(self):
         # "XX" is not a valid EU VAT prefix in our pattern
         assert not PATTERNS["vat"].pattern.search("XX12345678")
+
+    def test_generic_passport_is_case_sensitive(self):
+        assert not PATTERNS["passport"].pattern.search("zz000000")
 
 
 # ============================================================================
@@ -318,6 +347,13 @@ class TestDetectionEngine:
         findings = self.engine.detect_cell("8.8.8.8", "server_ip")
         rule_ids = [f.rule_id for f in findings]
         assert "ipv4_address" in rule_ids
+        assert "date" not in rule_ids
+
+    def test_vat_column_does_not_emit_generic_passport(self):
+        findings = self.engine.detect_cell("DE000000000", "vat_number")
+        rule_ids = [f.rule_id for f in findings]
+        assert "vat_de" in rule_ids
+        assert "passport" not in rule_ids
 
     def test_private_ip_lower_confidence(self):
         findings = self.engine.detect_cell("192.168.1.1", "source_ip")
@@ -341,6 +377,12 @@ class TestDetectionEngine:
         findings = self.engine.detect_cell("10000000147", "tc_no")
         rule_ids = [f.rule_id for f in findings]
         assert "tc_kimlik" not in rule_ids
+
+    def test_tr_phone_boosted_in_turkish_column(self):
+        findings = self.engine.detect_cell("+90 532 123 4567", "gsm_no")
+        tr_findings = [f for f in findings if f.rule_id == "tr_phone"]
+        assert len(tr_findings) > 0
+        assert tr_findings[0].confidence == 1.0
 
     def test_suppression_rule_removes_finding(self):
         engine_with_suppression = DetectionEngine(
@@ -527,6 +569,20 @@ class TestMaskingRecommendations:
         # Unknown categories fall back to "other" recommendations
         assert len(recs) > 0
 
+    def test_every_pattern_category_has_recommendation(self):
+        categories = {p.pii_category for p in PATTERNS.values()}
+        missing = categories - set(_MASKING_RECOMMENDATIONS.keys())
+        assert not missing, f"Categories missing from _MASKING_RECOMMENDATIONS: {missing}"
+
+    def test_name_category_recommendation(self):
+        recs = get_masking_recommendations({"name"})
+        assert "name" in recs
+        assert recs["name"]["primary"] == "redact"
+        assert "hash" in recs["name"]["alternatives"]
+        assert "tokenize" in recs["name"]["alternatives"]
+        assert recs["name"]["retention_days"] == 180
+        assert recs["name"]["ccpa_section"] is not None
+
 
 # ============================================================================
 # Privacy Impact Assessment tests
@@ -641,3 +697,20 @@ class TestPIA:
             reidentification_risk=None,
         )
         assert pia["jurisdiction_applicability"]["PCI_DSS"] is True
+
+    def test_pia_with_name_category(self):
+        pia = generate_privacy_impact_assessment(
+            findings_summary={
+                "total_findings": 10,
+                "pii_categories": ["name"],
+                "highest_severity": 0.3,
+                "rules_triggered": ["given_name", "surname"],
+            },
+            k_anonymity=None,
+            l_diversity=None,
+            t_closeness=None,
+            reidentification_risk=None,
+        )
+        assert "name" in pia["masking_recommendations"]
+        assert pia["masking_recommendations"]["name"]["primary"] == "redact"
+        assert pia["retention_recommendations_days"]["name"] == 180

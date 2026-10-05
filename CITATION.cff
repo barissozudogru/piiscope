@@ -1,0 +1,29 @@
+cff-version: 1.2.0
+title: "piiscope: find, score and remediate personal data in files and databases"
+message: "If you use this software, please cite it using these metadata."
+type: software
+authors:
+  - family-names: Sozudogru
+    given-names: Baris
+    orcid: "https://orcid.org/0009-0002-6506-1720"
+doi: "10.5281/zenodo.22071806"
+repository-code: "https://github.com/barissozudogru/piiscope"
+url: "https://github.com/barissozudogru/piiscope"
+abstract: >-
+  piiscope finds personal data in datasets and measures privacy risks across
+  global jurisdictions. It scans tabular data or free text to locate direct
+  identifiers and calculates k-anonymity, l-diversity and t-closeness on
+  quasi-identifiers. Findings can be remediated by applying hashing,
+  generalisation or tokenisation directly to the target columns.
+keywords:
+  - personal data
+  - privacy risk
+  - k-anonymity
+  - l-diversity
+  - t-closeness
+  - de-identification
+  - GDPR
+  - data protection
+license: Apache-2.0
+version: 1.3.0
+date-released: "2026-08-26"

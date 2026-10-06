@@ -149,6 +149,40 @@ def test_render_html():
     assert "medium" in html_text
 
 
+def test_render_html_escapes_special_characters():
+    result = ScanResult(
+        source="data.csv",
+        rows=10,
+        columns=2,
+        findings=[
+            Finding(
+                column="col<script>",
+                category="cat<b>alert</b>",
+                detector="det<img src=x onerror=alert(1)>",
+                count=1,
+                confidence=0.9,
+                severity=0.5,
+                samples_redacted=["***"],
+                jurisdictions=["<script>bad()</script>"],
+                file="file<script>.csv",
+            )
+        ],
+        jurisdictions=["gdpr"],
+        scan_time=0.1,
+        metrics=None,
+        risk=RiskScore(score=10.0, level="low", drivers=[]),
+    )
+    html_text = render_html(result)
+    assert "<script>" not in html_text
+    assert "<b>" not in html_text
+    assert "<img" not in html_text
+    assert "&lt;script&gt;" in html_text
+    assert "&lt;b&gt;alert&lt;/b&gt;" in html_text
+    assert "&lt;img src=x onerror=alert(1)&gt;" in html_text
+    assert "&lt;script&gt;bad()&lt;/script&gt;" in html_text
+
+
+
 def test_write_report_with_path_and_str(tmp_path):
     result = ScanResult(
         source="data.csv",

@@ -100,7 +100,7 @@ def render_html(result: ScanResult) -> str:
         f"<td>{e(f.category)}</td><td>{e(f.detector)}</td>"
         f"<td class='num'>{f.count}</td>"
         f"<td class='num'>{f.confidence:.2f}</td>"
-        f"<td>{e(', '.join(f.jurisdictions) or '-')}</td></tr>"
+        f"<td>{e(', '.join(f.jurisdictions) if f.jurisdictions else '-')}</td></tr>"
         for f in result.findings
     )
     drivers = "".join(f"<li>{e(d)}</li>" for d in result.risk.drivers)

@@ -337,6 +337,9 @@ def _emit(
             output.write_text(text + "\n", encoding="utf-8")
         return
 
+    if console.quiet:
+        return
+
     if text is not None:
         # plain print: rich would wrap long lines and corrupt the payload
         typer.echo(text)
@@ -448,7 +451,7 @@ def scan_cmd(
             if output:
                 output.parent.mkdir(parents=True, exist_ok=True)
                 output.write_text(out_text + "\n", encoding="utf-8")
-            else:
+            elif not quiet:
                 typer.echo(out_text)
         elif format == OutputFormat.table:
             table = Table(

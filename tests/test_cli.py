@@ -183,6 +183,50 @@ class TestScanFormats:
         assert result.exit_code == 0
         assert result.output == ""
 
+    def test_quiet_json_format_prints_nothing(self):
+        result = _invoke("scan", str(SAMPLES / "medical_notes.csv"), "--format", "json", "--quiet")
+        assert result.exit_code == 0
+        assert result.output == ""
+
+    def test_quiet_csv_format_prints_nothing(self):
+        result = _invoke("scan", str(SAMPLES / "medical_notes.csv"), "--format", "csv", "--quiet")
+        assert result.exit_code == 0
+        assert result.output == ""
+
+    def test_quiet_markdown_format_prints_nothing(self):
+        result = _invoke(
+            "scan", str(SAMPLES / "medical_notes.csv"), "--format", "markdown", "--quiet"
+        )
+        assert result.exit_code == 0
+        assert result.output == ""
+
+    def test_quiet_sarif_format_prints_nothing(self):
+        result = _invoke("scan", str(SAMPLES / "medical_notes.csv"), "--format", "sarif", "--quiet")
+        assert result.exit_code == 0
+        assert result.output == ""
+
+    def test_quiet_directory_scan_json_prints_nothing(self):
+        result = _invoke("scan", str(SAMPLES), "--format", "json", "--quiet")
+        assert result.exit_code == 0
+        assert result.output == ""
+
+    def test_quiet_with_output_file_writes_file_and_prints_nothing(self, tmp_path):
+        out = tmp_path / "quiet_scan.json"
+        result = _invoke(
+            "scan",
+            str(SAMPLES / "medical_notes.csv"),
+            "--format",
+            "json",
+            "-o",
+            str(out),
+            "--quiet",
+        )
+        assert result.exit_code == 0
+        assert result.output == ""
+        assert out.exists()
+        payload = json.loads(out.read_text())
+        assert payload["rows"] == 4
+
     def test_sample_rows(self):
         result = _invoke(
             "scan", str(SAMPLES / "customers.csv"), "--format", "json", "--sample", "2"

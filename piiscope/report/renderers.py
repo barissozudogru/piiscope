@@ -12,6 +12,11 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
     from piiscope.scan import ScanResult
 
 
+def _escape_md_cell(value: object) -> str:
+    s = str(value) if value is not None else ""
+    return s.replace("\\", "\\\\").replace("|", "\\|").replace("\n", " ").replace("\r", " ")
+
+
 def render_markdown(result: ScanResult) -> str:
     """Render a scan result as a markdown document."""
     lines: list[str] = [
@@ -47,9 +52,11 @@ def render_markdown(result: ScanResult) -> str:
         ]
         for f in result.findings:
             where = f"{f.file}: {f.column}" if f.file else f.column
+            juris_str = ", ".join(f.jurisdictions) or "-"
             lines.append(
-                f"| {where} | {f.category} | {f.detector} | {f.count} "
-                f"| {f.confidence:.2f} | {', '.join(f.jurisdictions) or '-'} |"
+                f"| {_escape_md_cell(where)} | {_escape_md_cell(f.category)} "
+                f"| {_escape_md_cell(f.detector)} | {f.count} "
+                f"| {f.confidence:.2f} | {_escape_md_cell(juris_str)} |"
             )
         lines.append("")
 
@@ -66,8 +73,8 @@ def render_markdown(result: ScanResult) -> str:
         lines += [
             "| Metric | Value |",
             "|---|---|",
-            f"| Quasi identifiers | {qi} |",
-            f"| Sensitive attribute | {sensitive} |",
+            f"| Quasi identifiers | {_escape_md_cell(qi)} |",
+            f"| Sensitive attribute | {_escape_md_cell(sensitive)} |",
             f"| k-anonymity | {k} |",
             f"| l-diversity | {l_div} |",
             f"| t-closeness | {t} |",

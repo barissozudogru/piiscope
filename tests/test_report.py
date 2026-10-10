@@ -59,6 +59,46 @@ def test_render_markdown_with_findings_and_metrics():
     assert "- email" in md
     assert "| k-anonymity | 5 |" in md
 
+
+def test_render_markdown_escapes_pipe_and_newline():
+    result = ScanResult(
+        source="data.csv",
+        rows=10,
+        columns=2,
+        findings=[
+            Finding(
+                column="col|with|pipe",
+                file="file|name.csv",
+                category="demographic|other",
+                detector="custom|det",
+                count=3,
+                confidence=0.85,
+                severity=0.5,
+                samples_redacted=["***"],
+                jurisdictions=["gdpr|custom", "ccpa"],
+            )
+        ],
+        jurisdictions=["gdpr"],
+        scan_time=0.2,
+        metrics=MetricsResult(
+            quasi_identifiers=["quasi|1", "quasi\n2"],
+            sensitive_attribute="sens|attr",
+            k_anonymity=2,
+            l_diversity=1,
+            t_closeness=0.1,
+        ),
+        risk=RiskScore(score=30.0, level="medium", drivers=["col|with|pipe"]),
+    )
+    md = render_markdown(result)
+    expected_row = (
+        "| file\\|name.csv: col\\|with\\|pipe | demographic\\|other | "
+        "custom\\|det | 3 | 0.85 | gdpr\\|custom, ccpa |"
+    )
+    assert expected_row in md
+    assert "| Quasi identifiers | quasi\\|1, quasi 2 |" in md
+    assert "| Sensitive attribute | sens\\|attr |" in md
+
+
 def test_render_sarif_empty_findings():
     result = ScanResult(
         source="test.csv",

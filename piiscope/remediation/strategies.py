@@ -114,7 +114,7 @@ def apply_strategy(
                 raise RemediationError(
                     f"column '{column}' not found; available: {', '.join(map(str, frame.columns))}"
                 )
-        series = frame[col_key].astype(str)
+        series = frame[col_key].fillna("").astype(str)
         transformed = series.map(transform)
         changed[str(column)] = int((transformed != series).sum())
         frame[col_key] = transformed

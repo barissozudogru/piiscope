@@ -279,3 +279,55 @@ def test_remediate_frame_with_negative_integer_column():
     assert changed == {"-1": 1}
     assert df[-1].iloc[0] != "alice@example.com"
 
+
+def test_apply_strategy_preserves_null_values():
+    df = pd.DataFrame(
+        {
+            "email": ["alice@example.com", None, float("nan")],
+            "phone": ["+49 170 1234567", None, ""],
+            "age": [25, None, float("nan")],
+            "date": ["1990-01-01", None, float("nan")],
+        }
+    )
+    changed, _ = apply_strategy(
+        df,
+        strategy="hash",
+        columns=["email"],
+    )
+    assert changed == {"email": 1}
+    assert df["email"].iloc[0] != ""
+    assert df["email"].iloc[1] == ""
+    assert df["email"].iloc[2] == ""
+
+    changed_redact, _ = apply_strategy(df, strategy="redact", columns=["phone"])
+    assert changed_redact == {"phone": 1}
+    assert df["phone"].iloc[0] != ""
+    assert df["phone"].iloc[1] == ""
+    assert df["phone"].iloc[2] == ""
+
+    changed_gen, _ = apply_strategy(df, strategy="generalise", columns=["age"], bucket_size=10)
+    assert changed_gen == {"age": 1}
+    assert df["age"].iloc[0] == "20-29"
+    assert df["age"].iloc[1] == ""
+    assert df["age"].iloc[2] == ""
+
+    changed_shift, _ = apply_strategy(df, strategy="date-shift", columns=["date"], shift_days=30)
+    assert changed_shift == {"date": 1}
+    assert df["date"].iloc[0] == "1990-01-31"
+    assert df["date"].iloc[1] == ""
+    assert df["date"].iloc[2] == ""
+
+    df_null = pd.DataFrame({"email": ["alice@example.com", None, ""]})
+    changed_null, _ = apply_strategy(df_null, strategy="null", columns=["email"])
+    assert changed_null == {"email": 1}
+    assert (df_null["email"] == "").all()
+
+
+def test_remediate_frame_preserves_null_values():
+    df = pd.DataFrame({"email": ["alice@example.com", None, float("nan")]})
+    changed, _ = remediate_frame(df, strategy="redact")
+    assert changed == {"email": 1}
+    assert df["email"].iloc[0] == "a***************m"
+    assert df["email"].iloc[1] == ""
+    assert df["email"].iloc[2] == ""
+

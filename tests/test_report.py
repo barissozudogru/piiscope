@@ -262,3 +262,83 @@ def test_write_report_unsupported_extension(tmp_path):
     with pytest.raises(PiiscopeError, match="use a .json, .md, .html or .sarif extension"):
         write_report(result, tmp_path / "report.xyz")
 
+
+def test_write_report_sarif_multiple_results(tmp_path):
+    r1 = ScanResult(
+        source="file1.csv",
+        rows=10,
+        columns=2,
+        findings=[
+            Finding(
+                column="email",
+                category="contact",
+                detector="email",
+                count=2,
+                confidence=0.9,
+                severity=0.5,
+                samples_redacted=["e***@example.com"],
+                jurisdictions=["gdpr"],
+                file="file1.csv",
+            )
+        ],
+        jurisdictions=["gdpr"],
+        scan_time=0.1,
+        metrics=None,
+        risk=RiskScore(score=30.0, level="medium", drivers=["email"]),
+    )
+    r2 = ScanResult(
+        source="file2.csv",
+        rows=20,
+        columns=3,
+        findings=[
+            Finding(
+                column="ssn",
+                category="national_id",
+                detector="us_ssn",
+                count=1,
+                confidence=0.85,
+                severity=0.9,
+                samples_redacted=["***-**-6789"],
+                jurisdictions=["ccpa"],
+                file="file2.csv",
+            )
+        ],
+        jurisdictions=["ccpa"],
+        scan_time=0.15,
+        metrics=None,
+        risk=RiskScore(score=85.0, level="critical", drivers=["ssn"]),
+    )
+    out_sarif = tmp_path / "combined.sarif"
+    write_report([r1, r2], out_sarif)
+    assert out_sarif.exists()
+    payload = json.loads(out_sarif.read_text())
+    assert payload["version"] == "2.1.0"
+    assert len(payload["runs"][0]["results"]) == 2
+    rule_ids = {res["ruleId"] for res in payload["runs"][0]["results"]}
+    assert rule_ids == {"email", "us_ssn"}
+
+
+def test_write_report_multiple_results_unsupported_format(tmp_path):
+    r1 = ScanResult(
+        source="file1.csv",
+        rows=10,
+        columns=2,
+        findings=[],
+        jurisdictions=["gdpr"],
+        scan_time=0.1,
+        metrics=None,
+        risk=RiskScore(score=0.0, level="low", drivers=[]),
+    )
+    with pytest.raises(
+        PiiscopeError,
+        match="writing multiple scan results to .json is not supported; use .sarif",
+    ):
+        write_report([r1], tmp_path / "combined.json")
+
+    with pytest.raises(
+        PiiscopeError,
+        match="cannot write report to .*; use a .json, .md, .html or .sarif extension",
+    ):
+        write_report([r1], tmp_path / "combined.xyz")
+
+

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import html
+from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -184,11 +185,25 @@ ul {{ margin-top: .4rem; }}
 </html>"""
 
 
-def write_report(result: ScanResult, out: Path | str) -> str:
+def write_report(result: ScanResult | Sequence[ScanResult], out: Path | str) -> str:
     """Write a report file; the extension (.json, .md, .html, .sarif) picks the format."""
     out_path = Path(out)
     suffix = out_path.suffix.lower()
-    if suffix == ".json":
+    if isinstance(result, Sequence) and not hasattr(result, "findings"):
+        results = list(result)
+        if suffix == ".sarif":
+            from piiscope.report.sarif import render_sarif
+
+            content = render_sarif(results)
+        elif suffix in (".json", ".md", ".markdown", ".txt", ".html", ".htm"):
+            raise PiiscopeError(
+                f"writing multiple scan results to {suffix} is not supported; use .sarif"
+            )
+        else:
+            raise PiiscopeError(
+                f"cannot write report to {out}; use a .json, .md, .html or .sarif extension"
+            )
+    elif suffix == ".json":
         content = render_json(result)
     elif suffix in (".md", ".markdown", ".txt"):
         content = render_markdown(result)
